@@ -125,7 +125,7 @@
       expert: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
       relied: new Set(), picks: {}, submitted: false, flatten: '', logType: 'GR',
-      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
+      viewed: new Set(['GR']), flattenUsed: false, seisLooked: false, weighed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
     (c.tops || []).forEach((t) => (S.picks[t.name] = {}));
     S.activeTop = c.tops && c.tops.length ? c.tops[0].name : null;
@@ -206,7 +206,7 @@
     ).join('');
 
     $('#evidence').innerHTML = (c.evidence || []).length
-      ? '<h4>Evidence relied on</h4>' + c.evidence.map((e) => '<label class="ev"><input type="checkbox" data-ev="' + esc(e.id) + '"> <span>' + rich(e.label) + '</span></label>').join('')
+      ? '<h4>Evidence relied on</h4><p class="howto">Tick the observations your distribution rests on. Optional; used by the evidence check in the debrief.</p>' + c.evidence.map((e) => '<label class="ev"><input type="checkbox" data-ev="' + esc(e.id) + '"> <span>' + rich(e.label) + '</span></label>').join('')
       : '';
     $('#justifyWrap').hidden = !(c.requireJustification || c.tier === 'advanced');
     $('#justify').value = '';
@@ -215,7 +215,29 @@
     $('#debrief').hidden = true;
     document.body.classList.remove('locked');
     updateShares();
+    updateSteps();
     requestAnimationFrame(() => { drawSeis(); drawLogs(); });
+  }
+
+  /* ---------- step guide ---------- */
+  function updateSteps() {
+    const c = S.c; if (!c) return;
+    const hasWells = c.wells && c.wells.length, tops = c.tops || [];
+    let need = 0, made = 0;
+    tops.forEach((t) => (c.wells || []).forEach((w) => { need++; if (S.picks[t.name] && S.picks[t.name][w.name] != null) made++; }));
+    const st = {
+      1: { done: S.seisLooked, text: S.seisLooked ? 'Looked at' : 'Move over the section' },
+      2: hasWells && tops.length ? { done: made > 0, text: made + ' of ' + need + ' picks' + (made ? '' : ' so far') } : { skip: true, text: hasWells ? 'Logs only, no tops' : 'No wells in this case' },
+      3: { done: S.weighed, text: S.weighed ? 'Sliders set' : 'Sliders start equal' },
+      4: { done: S.submitted, text: S.submitted ? 'Debrief below' : (c.requireJustification || c.tier === 'advanced' ? 'Needs a justification' : 'Not yet') }
+    };
+    let current = 0;
+    [1, 2, 3, 4].forEach((k) => { if (!current && !st[k].done && !st[k].skip) current = k; });
+    document.querySelectorAll('#steps li').forEach((li) => {
+      const k = Number(li.dataset.step);
+      li.classList.toggle('done', !!st[k].done); li.classList.toggle('skip', !!st[k].skip); li.classList.toggle('current', k === current);
+      $('#st' + k).textContent = st[k].text;
+    });
   }
 
   /* ---------- weights ---------- */
@@ -501,7 +523,7 @@
       if (S.flatten === S.activeTop) return; // flattened top cannot be moved while flattened
       P[w.name] = Math.round(d);
     }
-    drawLogs(); drawSeis();
+    drawLogs(); drawSeis(); updateSteps();
   }
 
   /* ---------- submit and debrief ---------- */
@@ -516,7 +538,7 @@
     document.body.classList.add('locked');
     $('#submit').disabled = true; $('#submitMsg').textContent = '';
     renderDebrief();
-    drawSeis(); drawLogs();
+    drawSeis(); drawLogs(); updateSteps();
     $('#debrief').hidden = false;
     $('#debrief').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
@@ -651,7 +673,7 @@
       }
       S.flatten = t; if (t) S.flattenUsed = true; drawLogs();
     });
-    $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); });
+    $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); updateSteps(); });
     const lc = $('#logs');
     lc.addEventListener('click', logClick);
     lc.addEventListener('mousemove', (e) => { S.hoverY = e.clientY - lc.getBoundingClientRect().top; drawLogs(); });
@@ -662,13 +684,19 @@
       const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
       if (x < 0 || x > S.width_m || v < 0 || v > g.vmax) { $('#seisReadout').textContent = ''; return; }
       if (S.section) { S.refX = x; drawSeis(); }
+      if (!S.seisLooked) { S.seisLooked = true; updateSteps(); }
       const time = S.domain === 'time' && S.section;
       $('#seisReadout').textContent = (x / 1000).toFixed(2) + ' km, ' + (time ? Math.round(v * 1000) + ' ms (≈ ' + Math.round(zAt(x, v)) + ' m)' : Math.round(v) + ' m' + (S.section ? ' (≈ ' + Math.round(tAt(x, v) * 1000) + ' ms)' : ''));
     });
     $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); });
-    $('#candidates').addEventListener('input', (e) => { const s = e.target.closest('input[data-cand]'); if (!s) return; S.raw[s.dataset.cand] = Number(s.value); updateShares(); });
+    $('#candidates').addEventListener('input', (e) => { const s = e.target.closest('input[data-cand]'); if (!s) return; S.raw[s.dataset.cand] = Number(s.value); S.weighed = true; updateShares(); updateSteps(); });
     $('#evidence').addEventListener('change', (e) => { const cb = e.target.closest('input[data-ev]'); if (!cb) return; cb.checked ? S.relied.add(cb.dataset.ev) : S.relied.delete(cb.dataset.ev); });
     $('#submit').addEventListener('click', submit);
+    $('#steps').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-goto]'); if (!b) return;
+      const el = document.getElementById(b.dataset.goto); if (el && !el.hidden) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
+    $('#howBtn').addEventListener('click', () => $('#howDlg').showModal());
     $('#biasToggle').addEventListener('change', (e) => { $('#bias').hidden = !e.target.checked; });
     $('#retry').addEventListener('click', () => { loadCase(S.c.id); window.scrollTo({ top: 0 }); });
     $('#next').addEventListener('click', nextCase);
@@ -710,5 +738,8 @@
     if (!startId && GW.cases.length) startId = (GW.cases.find((c) => c.tier === GW.tiers[0].id) || GW.cases[0]).id;
     renderTiers();
     if (startId) loadCase(startId);
+    let seen = false;
+    try { seen = localStorage.getItem('geoDetectiveHowSeen') === '1'; localStorage.setItem('geoDetectiveHowSeen', '1'); } catch (e) { /* storage unavailable */ }
+    if (!seen && $('#howDlg').showModal) $('#howDlg').showModal();
   };
 })();

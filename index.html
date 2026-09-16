@@ -17,9 +17,12 @@
       <h1>Geo-Detective</h1>
       <p>Seismic and well evidence, several explanations, one confidence distribution.</p>
     </div>
+    <div class="mast-actions">
+    <button type="button" id="howBtn" class="btn quiet">How to play</button>
     <label class="btn quiet file">Open a case file (.json)
       <input type="file" id="caseFile" accept=".json,application/json" hidden>
     </label>
+    </div>
   </header>
 
   <nav class="tierbar" aria-label="Difficulty">
@@ -39,10 +42,17 @@
       <button type="button" id="popCase" class="btn quiet">Open case file in new window</button>
     </section>
 
+    <ol id="steps" class="steps" aria-label="Steps in this case">
+      <li data-step="1"><button type="button" data-goto="seisPanel"><span class="num">1</span><span class="st-title">Examine the seismic</span><span class="st-status" id="st1"></span></button></li>
+      <li data-step="2"><button type="button" data-goto="logPanel"><span class="num">2</span><span class="st-title">Pick tops in the wells</span><span class="st-status" id="st2"></span></button></li>
+      <li data-step="3"><button type="button" data-goto="verdict"><span class="num">3</span><span class="st-title">Weigh the interpretations</span><span class="st-status" id="st3"></span></button></li>
+      <li data-step="4"><button type="button" data-goto="verdict"><span class="num">4</span><span class="st-title">Submit and compare</span><span class="st-status" id="st4"></span></button></li>
+    </ol>
+
     <div id="board" class="board">
-      <section class="panel">
+      <section class="panel" id="seisPanel">
         <div class="panel-head">
-          <h3>Seismic section</h3>
+          <h3><span class="num">1</span>Seismic section</h3>
           <div class="controls">
             <label>Display
               <select id="domain"><option value="depth">Depth (converted)</option><option value="time">Two-way time</option></select>
@@ -54,40 +64,48 @@
             <label class="check"><input id="showWells" type="checkbox" checked> Wells and picks</label>
           </div>
         </div>
+        <p class="howto">Move the cursor over the section to read distance, depth and time. Switch <b>Display</b> to two-way time to see the section as recorded. Wells are the vertical lines; picked tops appear on them as colored ticks.</p>
         <div class="canvas-wrap"><p id="building" class="building" hidden>Building section and logs…</p><canvas id="seis" aria-label="Synthetic seismic section"></canvas></div>
-        <p class="readout"><span id="seisReadout"></span><span id="seisImageNote" hidden>Image display: color and gain are fixed.</span><span class="legend-amp">Positive amplitude: black (gray) or blue (red–white–blue). The red marker sets where the right-hand scale applies; it follows the cursor.</span></p>
+        <p class="readout"><span id="seisReadout"></span><span id="seisImageNote" hidden>Image display: color and gain are fixed.</span><span class="legend-amp">Positive amplitude: black (gray) or blue (red–white–blue). The right-hand scale applies at the red marker.</span></p>
       </section>
 
       <section class="panel" id="logPanel">
         <div class="panel-head">
-          <h3>Well logs</h3>
+          <h3><span class="num">2</span>Well logs</h3>
           <div class="controls">
             <div id="logType" class="seg" role="group" aria-label="Log type"></div>
           </div>
         </div>
+        <p class="howto" id="logHowto">Choose a log type above. Choose a top in <b>Pick</b>, then click its depth in each well; a line joins the picks between wells. Click a pick again to remove it. Once a top is picked in every well, <b>Display</b> can flatten the logs on it.</p>
         <div class="controls row2">
           <span id="topWrap"><label>Pick <select id="activeTop"></select></label></span>
           <label>Display <select id="flatten"></select></label>
           <button type="button" id="clearPicks" class="btn quiet small">Clear picks</button>
         </div>
         <div class="canvas-wrap"><canvas id="logs" aria-label="Well log tracks"></canvas></div>
-        <p class="readout"><span id="logReadout"></span><span>Click a track to place the selected top; click a pick again to remove it.</span></p>
+        <p class="readout"><span id="logReadout"></span></p>
         <p id="topLegend" class="top-legend"></p>
         <ul id="wellNotes" class="well-notes"></ul>
       </section>
     </div>
 
+    <div class="verdict-head" id="verdict">
+      <h3><span class="num">3</span>Weigh the interpretations</h3>
+      <p class="howto">Each interpretation below could explain the data. Move the sliders to share your confidence among them; the percentages always add to 100%. Weight can sit on more than one interpretation.</p>
+    </div>
     <section class="verdict">
       <div id="candidates" class="candidates"></div>
       <aside class="weights">
-        <h3>Confidence distribution</h3>
+        <h3>Your confidence</h3>
         <div id="distBar" class="dist-bar" aria-hidden="true"></div>
         <div id="distLegend" class="dist-legend"></div>
         <div id="evidence" class="evidence"></div>
         <div id="justifyWrap" hidden>
           <label for="justify"><h4>Justification</h4></label>
+          <p class="howto">This case has no wells to check against, so a few sentences on the seismic observations behind the distribution are required.</p>
           <textarea id="justify" rows="5" placeholder="The observations behind this distribution"></textarea>
         </div>
+        <p class="howto small"><span class="num">4</span>Submitting locks the sliders and picks, then compares them with the panel of interpreters.</p>
         <button type="button" id="submit" class="btn primary">Submit distribution</button>
         <p id="submitMsg" class="msg" role="status"></p>
       </aside>
@@ -116,6 +134,20 @@
   <footer class="foot">
     <p>Heather Bedle, University of Oklahoma. Licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. Cases in this release are synthetic sections generated in the browser; panel weights are provisional.</p>
   </footer>
+
+  <dialog id="howDlg" class="how">
+    <h2>How to play</h2>
+    <p>Each case is a piece of subsurface with more than one possible explanation. The task is to decide how much confidence each explanation deserves, based on the seismic and the wells.</p>
+    <ol class="how-steps">
+      <li><b>Examine the seismic.</b> Look at how reflections are offset, thicken, thin, bend or end. Depth and two-way time can both be displayed.</li>
+      <li><b>Pick tops in the wells.</b> Switch between log types, pick the same surface in each well, and flatten on a pick to compare thicknesses. Logs carry real-world problems such as washouts, old tools and depth offsets.</li>
+      <li><b>Weigh the interpretations.</b> Share 100% of your confidence among the candidates with the sliders, and tick the evidence your distribution rests on.</li>
+      <li><b>Submit and compare.</b> The debrief shows your distribution next to a panel of interpreters, what is actually known about the case and how confident that knowledge is, and the panel's picks. An optional evidence check lists evidence the panel rated as diagnostic that was not ticked.</li>
+    </ol>
+    <p>There is no single right answer to hit. The score is the overlap between your distribution and the panel's, where 100% means identical.</p>
+    <p class="small">Underlined words open a short definition. Easy cases have clean data; hard and advanced cases have poorer data, fewer wells, or none.</p>
+    <form method="dialog"><button class="btn primary">Start</button></form>
+  </dialog>
 
   <div id="termPop" class="term-pop" role="dialog" hidden></div>
 

@@ -168,3 +168,31 @@ blockquote { margin: 4px 0; padding: 4px 12px; border-left: 3px solid var(--grid
   .conf { grid-template-columns: 1fr 3em; }
   .conf > span:first-child { grid-column: 1 / -1; }
 }
+
+/* instructions */
+.mast-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.num { display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--red); color: #fff; font: 700 13px/1 var(--sans); margin-right: 8px; vertical-align: 2px; flex: none; }
+.howto { margin: 0 0 8px; font-size: 14px; color: var(--slate); max-width: 80ch; }
+.howto.small { font-size: 13px; margin-top: 12px; display: flex; align-items: baseline; }
+.howto b { color: var(--ink); font-weight: 600; }
+.steps { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 12px; padding: 0; }
+@media (max-width: 800px) { .steps { grid-template-columns: 1fr 1fr; } }
+.steps button { width: 100%; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; text-align: left; background: var(--paper); border: 1px solid var(--grid); border-bottom: 3px solid var(--grid); padding: 7px 10px; cursor: pointer; border-radius: 2px; }
+.steps .num { grid-row: 1 / 3; background: var(--slate); }
+.steps .st-title { font-weight: 600; font-size: 14px; }
+.steps .st-status { font-size: 12px; color: var(--slate); }
+.steps li.current button { border-bottom-color: var(--red); }
+.steps li.current .num { background: var(--red); }
+.steps li.done .num { background: var(--ink); }
+.steps li.skip { opacity: 0.55; }
+.verdict-head { margin-top: 18px; }
+.verdict-head h3, .panel h3 { display: flex; align-items: center; }
+.verdict-head h3 { font: 600 20px/1.2 var(--serif); margin-bottom: 4px; }
+dialog.how { max-width: 640px; border: 1px solid var(--slate); border-top: 4px solid var(--red); padding: 18px 22px; background: var(--paper); color: var(--ink); }
+dialog.how::backdrop { background: rgba(10, 12, 14, 0.55); }
+dialog.how h2 { font: 650 26px/1.2 var(--serif); margin-bottom: 6px; }
+dialog.how p { margin: 6px 0; }
+.how-steps { padding-left: 22px; margin: 8px 0; }
+.how-steps li { margin: 6px 0; }
+dialog.how .small { font-size: 14px; color: var(--slate); }
+dialog.how form { text-align: right; margin-top: 10px; }
