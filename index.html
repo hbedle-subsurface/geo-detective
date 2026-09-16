@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Geo-Detective</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- GoatCounter: same snippet as the other hbedle-subsurface sites -->
+  <script data-goatcounter="https://hbedle.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <h1>Geo-Detective</h1>
+      <p>Seismic and well evidence, several explanations, one confidence distribution.</p>
+    </div>
+    <label class="btn quiet file">Open a case file (.json)
+      <input type="file" id="caseFile" accept=".json,application/json" hidden>
+    </label>
+  </header>
+
+  <nav class="tierbar" aria-label="Difficulty">
+    <div id="tiers" class="tiers" role="tablist"></div>
+    <p id="tierBlurb" class="tier-blurb"></p>
+  </nav>
+  <div id="caseList" class="case-list"></div>
+  <p id="status" class="status" hidden></p>
+
+  <main id="game" hidden>
+    <section class="case-head">
+      <div>
+        <span id="caseTier" class="tier-chip"></span>
+        <h2 id="caseTitle"></h2>
+        <p id="caseBrief" class="brief"></p>
+      </div>
+      <button type="button" id="popCase" class="btn quiet">Open case file in new window</button>
+    </section>
+
+    <div id="board" class="board">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Seismic section</h3>
+          <div class="controls">
+            <label>Display
+              <select id="domain"><option value="depth">Depth (converted)</option><option value="time">Two-way time</option></select>
+            </label>
+            <label>Color
+              <select id="cmap"><option value="gray">Gray</option><option value="rwb">Red–white–blue</option></select>
+            </label>
+            <label class="range">Gain <input id="gain" type="range" min="0.3" max="4" step="0.1" value="1"><output id="gainOut">1.0×</output></label>
+            <label class="check"><input id="showWells" type="checkbox" checked> Wells and picks</label>
+          </div>
+        </div>
+        <div class="canvas-wrap"><p id="building" class="building" hidden>Building section and logs…</p><canvas id="seis" aria-label="Synthetic seismic section"></canvas></div>
+        <p class="readout"><span id="seisReadout"></span><span id="seisImageNote" hidden>Image display: color and gain are fixed.</span><span class="legend-amp">Positive amplitude: black (gray) or blue (red–white–blue). The red marker sets where the right-hand scale applies; it follows the cursor.</span></p>
+      </section>
+
+      <section class="panel" id="logPanel">
+        <div class="panel-head">
+          <h3>Well logs</h3>
+          <div class="controls">
+            <div id="logType" class="seg" role="group" aria-label="Log type"></div>
+          </div>
+        </div>
+        <div class="controls row2">
+          <span id="topWrap"><label>Pick <select id="activeTop"></select></label></span>
+          <label>Display <select id="flatten"></select></label>
+          <button type="button" id="clearPicks" class="btn quiet small">Clear picks</button>
+        </div>
+        <div class="canvas-wrap"><canvas id="logs" aria-label="Well log tracks"></canvas></div>
+        <p class="readout"><span id="logReadout"></span><span>Click a track to place the selected top; click a pick again to remove it.</span></p>
+        <p id="topLegend" class="top-legend"></p>
+        <ul id="wellNotes" class="well-notes"></ul>
+      </section>
+    </div>
+
+    <section class="verdict">
+      <div id="candidates" class="candidates"></div>
+      <aside class="weights">
+        <h3>Confidence distribution</h3>
+        <div id="distBar" class="dist-bar" aria-hidden="true"></div>
+        <div id="distLegend" class="dist-legend"></div>
+        <div id="evidence" class="evidence"></div>
+        <div id="justifyWrap" hidden>
+          <label for="justify"><h4>Justification</h4></label>
+          <textarea id="justify" rows="5" placeholder="The observations behind this distribution"></textarea>
+        </div>
+        <button type="button" id="submit" class="btn primary">Submit distribution</button>
+        <p id="submitMsg" class="msg" role="status"></p>
+      </aside>
+    </section>
+
+    <section id="debrief" class="debrief" hidden>
+      <h3>Debrief</h3>
+      <div id="debriefBody"></div>
+      <label class="check bias-toggle"><input type="checkbox" id="biasToggle"> Show evidence check</label>
+      <div id="bias" class="bias" hidden></div>
+      <div class="debrief-actions">
+        <button type="button" id="retry" class="btn quiet">Replay this case</button>
+        <button type="button" id="next" class="btn primary">Next case</button>
+      </div>
+    </section>
+  </main>
+
+  <section id="session" class="session" hidden>
+    <h3>This session</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Case</th><th>Tier</th><th>Overlap with panel</th><th>Effective number (you / panel)</th></tr></thead>
+      <tbody id="sessionBody"></tbody>
+    </table></div>
+  </section>
+
+  <footer class="foot">
+    <p>Heather Bedle, University of Oklahoma. Licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. Cases in this release are synthetic sections generated in the browser; panel weights are provisional.</p>
+  </footer>
+
+  <div id="termPop" class="term-pop" role="dialog" hidden></div>
+
+  <script src="js/synth.js"></script>
+  <script src="js/glossary.js"></script>
+  <script src="js/engine.js"></script>
+  <!-- Cases: add one line per case file -->
+  <script src="cases/easy-01-broken-marker.js"></script>
+  <script src="cases/medium-01-thicker-side.js"></script>
+  <script src="cases/hard-01-the-rise.js"></script>
+  <script src="cases/advanced-01-the-hollow.js"></script>
+  <script>GW.start();</script>
+</body>
+</html>

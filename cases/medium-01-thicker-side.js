@@ -1,0 +1,96 @@
+GW.registerCase({
+  "id": "medium-01-thicker-side",
+  "title": "Thicker on one side",
+  "tier": "medium",
+  "author": "Heather Bedle",
+  "summary": "Units thicken eastward across a fault, and the two wells are more than 3 km apart.",
+  "brief": "The interval between Sand 1 and Sand 4 is thicker east of a steep fault than west of it. W1 and W2 are 3.1 km apart, on opposite sides of the fault. The logs were recorded 25 years apart with different tools.",
+  "seismic": {
+    "type": "synthetic",
+    "frequency_hz": 32,
+    "phase_deg": -25,
+    "Q": 130,
+    "noise": 0.32,
+    "multiples": 0.45,
+    "diffractions": 0.5,
+    "statics_ms": 4,
+    "footprint": 0.06,
+    "velocityError": 0.025,
+    "seed": 202,
+    "model": {
+      "width_m": 4000, "depth_m": 2400, "dx_m": 12.5, "dz_m": 4,
+      "dip_m_per_km": 15,
+      "layers": [
+        { "name": "Overburden", "lith": "shale", "thickness_m": 450, "lamination": 0.9 },
+        { "name": "Sand 1", "lith": "sand", "thickness_m": 50 },
+        { "name": "Shale A", "lith": "shale", "thickness_m": 150, "gradient_m_per_km": 8 },
+        { "name": "Sand 2", "lith": "sand", "thickness_m": 60 },
+        { "name": "Shale B", "lith": "shale", "thickness_m": 160, "gradient_m_per_km": 8 },
+        { "name": "Lime Stringer", "lith": "limestone", "thickness_m": 30 },
+        { "name": "Shale C", "lith": "silty_shale", "thickness_m": 180, "gradient_m_per_km": 8 },
+        { "name": "Sand 3", "lith": "sand", "thickness_m": 70, "profile": "fining" },
+        { "name": "Shale D", "lith": "shale", "thickness_m": 220, "gradient_m_per_km": 8 },
+        { "name": "Sand 4", "lith": "tight_sand", "thickness_m": 60 },
+        { "name": "Basal shale", "lith": "shale", "thickness_m": 1200 }
+      ],
+      "faults": [
+        { "x_m": 1500, "dip_deg": 58, "dipDirection": 1, "throw_m": 190, "sense": "normal", "growthTop_m": 520, "growthBase_m": 1500 }
+      ]
+    }
+  },
+  "wells": [
+    { "name": "W1", "x_m": 400, "td_m": 1900, "depthUncertainty_m": 10, "quality": "old", "logs": ["GR", "RES", "DT"],
+      "calibration": { "GR": { "scale": 1.0, "offset": 18 } },
+      "note": "Older logging suite with no density or neutron. Gamma ray reads systematically high relative to the modern tool." },
+    { "name": "W2", "x_m": 3500, "td_m": 2100, "depthUncertainty_m": 6,
+      "washouts": [ { "top_m": 1080, "base_m": 1150, "enlarge_in": 4 } ],
+      "note": "Modern suite." }
+  ],
+  "logWindow": { "top_m": 450, "base_m": 2000 },
+  "tops": [
+    { "name": "Sand 1", "expert": { "W1": { "depth": "model", "unc_m": 10 }, "W2": { "depth": "model", "unc_m": 6 } } },
+    { "name": "Sand 2", "expert": { "W1": { "depth": "model", "unc_m": 10 }, "W2": { "depth": "model", "unc_m": 6 } } },
+    { "name": "Lime Stringer", "expert": { "W1": { "depth": "model", "unc_m": 10 }, "W2": { "depth": "model", "unc_m": 6 } } },
+    { "name": "Sand 4", "expert": { "W1": { "depth": "model", "unc_m": 10 }, "W2": { "depth": "model", "unc_m": 8 } } }
+  ],
+  "candidates": [
+    {
+      "id": "growth",
+      "label": "Growth fault",
+      "description": "A [[growth-fault]] that slipped while Sand 1 to Sand 4 were deposited, so the [[hanging-wall]] accumulated more sediment.",
+      "pros": ["Offset of reflections increases with depth.", "Thickening is concentrated east of the fault."],
+      "cons": ["Only two wells, both far from the fault, measure thickness.", "Some thickening is also seen west of the fault."]
+    },
+    {
+      "id": "wedge",
+      "label": "Later fault through a depositional wedge",
+      "description": "The units already thickened eastward as a [[wedge]]; a fault cut them after deposition.",
+      "pros": ["Units west of the fault also thicken gently toward the east.", "Well thicknesses alone cannot place where thickening begins."],
+      "cons": ["A post-depositional fault would offset every unit by the same amount, which the reflections do not show."]
+    },
+    {
+      "id": "withdrawal",
+      "label": "Thickening from shale withdrawal",
+      "description": "[[shale-withdrawal]] at depth let the eastern block subside during deposition, with the fault accommodating it.",
+      "pros": ["Would also produce thickening that increases with depth."],
+      "cons": ["No mobile layer or thinning of a deep unit is imaged on this line.", "The line stops at 2.4 km depth."]
+    }
+  ],
+  "expertConsensus": { "growth": 0.55, "wedge": 0.28, "withdrawal": 0.17 },
+  "evidence": [
+    { "id": "offsetdepth", "label": "Offset increases with depth", "panelWeight": 3 },
+    { "id": "hwthick", "label": "Thickening concentrated in the hanging wall", "panelWeight": 3 },
+    { "id": "isochore", "label": "Sand 1 to Sand 4 interval thicker in W2 than W1", "panelWeight": 2 },
+    { "id": "fwthick", "label": "Gentle eastward thickening west of the fault", "panelWeight": 2 },
+    { "id": "lowrhob", "label": "Low bulk density below the Lime Stringer in W2", "panelWeight": 0 },
+    { "id": "sonicspikes", "label": "Sonic spikes below the Lime Stringer in W2", "panelWeight": 0 },
+    { "id": "highgr", "label": "Higher gamma ray values throughout W1", "panelWeight": 0 },
+    { "id": "deep", "label": "No imaging below 2.4 km", "panelWeight": 1 }
+  ],
+  "outcome": {
+    "statement": "The section was built with a growth fault (throw rising from 0 at 520 m to 190 m at 1500 m) through units that also thicken gently eastward.",
+    "confidence": 0.82,
+    "basis": "Both processes are present in the model. On real data, deeper imaging and a well nearer the fault would be needed to separate the fault-driven thickening from regional thickening and to rule out a mobile shale."
+  },
+  "debrief": "The low bulk density and sonic spikes in W2 sit inside a shale on the gamma ray log, over the interval where the caliper shows an enlarged hole, so they are borehole effects rather than a sand. The high gamma ray in W1 is a calibration offset: the log shape correlates even though the values do not match W2."
+});

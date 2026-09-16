@@ -1,0 +1,249 @@
+{
+  "id": "easy-02-twice-through",
+  "title": "Twice through",
+  "tier": "easy",
+  "author": "Heather Bedle (example of a case submitted as a JSON file)",
+  "summary": "Reflections step up to the east, and one well logs the same-looking sand twice.",
+  "brief": "Reflections east of a moderately dipping surface sit higher than their counterparts to the west. W2 logs two sands of similar thickness and character where W1 logs one.",
+  "seismic": {
+    "type": "synthetic",
+    "frequency_hz": 38,
+    "phase_deg": 0,
+    "Q": 180,
+    "noise": 0.15,
+    "multiples": 0.3,
+    "diffractions": 0.3,
+    "statics_ms": 2,
+    "footprint": 0.03,
+    "velocityError": 0.015,
+    "seed": 111,
+    "model": {
+      "width_m": 4000,
+      "depth_m": 2200,
+      "dx_m": 12.5,
+      "dz_m": 4,
+      "dip_m_per_km": 20,
+      "layers": [
+        {
+          "name": "Overburden",
+          "lith": "shale",
+          "thickness_m": 500,
+          "lamination": 0.9
+        },
+        {
+          "name": "Sand A",
+          "lith": "sand",
+          "thickness_m": 60,
+          "profile": "fining"
+        },
+        {
+          "name": "Shale 1",
+          "lith": "shale",
+          "thickness_m": 120
+        },
+        {
+          "name": "Ridge Limestone",
+          "lith": "limestone",
+          "thickness_m": 40
+        },
+        {
+          "name": "Shale 2",
+          "lith": "silty_shale",
+          "thickness_m": 150
+        },
+        {
+          "name": "Sand B",
+          "lith": "sand",
+          "thickness_m": 80,
+          "profile": "coarsening"
+        },
+        {
+          "name": "Shale 3",
+          "lith": "shale",
+          "thickness_m": 200
+        },
+        {
+          "name": "Sand C",
+          "lith": "tight_sand",
+          "thickness_m": 70
+        },
+        {
+          "name": "Shale 4",
+          "lith": "shale",
+          "thickness_m": 400
+        },
+        {
+          "name": "Lower Limestone",
+          "lith": "limestone",
+          "thickness_m": 50
+        },
+        {
+          "name": "Basal shale",
+          "lith": "silty_shale",
+          "thickness_m": 1000
+        }
+      ],
+      "faults": [
+        {
+          "x_m": 1600,
+          "dip_deg": 40,
+          "dipDirection": 1,
+          "throw_m": 110,
+          "sense": "reverse",
+          "tip_m": 380,
+          "tipTaper_m": 120
+        }
+      ]
+    },
+    "velocitySmoothing_m": 25
+  },
+  "wells": [
+    {
+      "name": "W1",
+      "x_m": 900,
+      "td_m": 1800,
+      "depthUncertainty_m": 5,
+      "note": "Modern wireline suite: gamma ray, caliper, resistivity, density, neutron, sonic."
+    },
+    {
+      "name": "W2",
+      "x_m": 2684,
+      "td_m": 1800,
+      "depthUncertainty_m": 8,
+      "note": "Vertical well. Cuttings descriptions report the same fine sandstone at both levels."
+    }
+  ],
+  "logWindow": {
+    "top_m": 450,
+    "base_m": 1750
+  },
+  "tops": [
+    {
+      "name": "Ridge Limestone",
+      "expert": {
+        "W1": {
+          "depth": "model",
+          "unc_m": 5
+        },
+        "W2": {
+          "depth": "model",
+          "unc_m": 8
+        }
+      }
+    },
+    {
+      "name": "Sand B",
+      "expert": {
+        "W1": {
+          "depth": "model",
+          "unc_m": 5
+        },
+        "W2": {
+          "depth": "model",
+          "unc_m": 8
+        }
+      }
+    },
+    {
+      "name": "Sand B, second",
+      "expert": {
+        "W1": {
+          "absent": true
+        },
+        "W2": {
+          "depth": 924,
+          "unc_m": 10,
+          "note": "Footwall Sand B below the fault."
+        }
+      }
+    },
+    {
+      "name": "Sand C",
+      "expert": {
+        "W1": {
+          "depth": "model",
+          "unc_m": 5
+        },
+        "W2": {
+          "depth": "model",
+          "unc_m": 8
+        }
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "id": "reverse",
+      "label": "Reverse fault",
+      "description": "A [[reverse-fault]] with the [[hanging-wall]] up to the east, formed under horizontal shortening.",
+      "pros": [
+        "Reflections east of the fault are higher by a similar amount at every level.",
+        "A borehole crossing a reverse fault logs part of the section twice, as W2 does for Sand B."
+      ],
+      "cons": [
+        "A single 2D line records only [[apparent-separation]]."
+      ]
+    },
+    {
+      "id": "strikeslip",
+      "label": "Strike-slip fault",
+      "description": "A [[strike-slip]] fault whose horizontal motion appears as reverse separation on this line.",
+      "pros": [
+        "No strike information is available from one line."
+      ],
+      "cons": [
+        "Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."
+      ]
+    },
+    {
+      "id": "twosands",
+      "label": "Two similar sands, no repetition",
+      "description": "W2 penetrated two separate sand bodies with similar log character; the offset of reflections has another cause.",
+      "pros": [
+        "Sands of similar thickness and log shape are common in a cyclic succession."
+      ],
+      "cons": [
+        "W1 has only one sand at this level, 1.9 km away.",
+        "The two W2 sands bracket the depth where the discontinuity crosses the well."
+      ]
+    }
+  ],
+  "expertConsensus": {
+    "reverse": 0.76,
+    "strikeslip": 0.1,
+    "twosands": 0.14
+  },
+  "evidence": [
+    {
+      "id": "up",
+      "label": "Reflections higher east of the discontinuity",
+      "panelWeight": 3
+    },
+    {
+      "id": "repeat",
+      "label": "Two Sand B-like units in W2",
+      "panelWeight": 3
+    },
+    {
+      "id": "bracket",
+      "label": "The two sands bracket the fault crossing in W2",
+      "panelWeight": 3
+    },
+    {
+      "id": "cuttings",
+      "label": "Cuttings descriptions identical at both levels",
+      "panelWeight": 1
+    },
+    {
+      "id": "oneline",
+      "label": "Only one 2D line",
+      "panelWeight": 2
+    }
+  ],
+  "outcome": {
+    "statement": "The section was built with a reverse fault of 110 m throw that W2 crosses at about 910 m.",
+    "confidence": 0.9,
+    "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."
+  },
+  "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall."
+}
