@@ -18,8 +18,14 @@ for (const f of files) {
   console.log('\n' + path.basename(f) + ' [' + (c && c.tier) + ']');
   v.errors.forEach((e) => console.log('  ERROR ' + e)); v.warnings.forEach((e) => console.log('  note  ' + e));
   if (v.errors.length) { bad++; continue; }
-  const s = c.candidates.reduce((a, k) => a + c.expertConsensus[k.id], 0);
-  console.log('  candidates ' + c.candidates.length + ', expert weights sum ' + s.toFixed(2));
+  if ((c.evidence || []).some((e) => e.likelihood)) {
+    const post = (items) => { const p = Object.fromEntries(c.candidates.map((k) => [k.id, 1])); items.forEach((e) => c.candidates.forEach((k) => (p[k.id] *= e.likelihood && e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5))); const t = Object.values(p).reduce((a, b) => a + b, 0); return c.candidates.map((k) => k.id + ' ' + Math.round((p[k.id] / t) * 100) + '%').join(', '); };
+    console.log('  panel after all evidence: ' + post(c.evidence));
+    (c.leads || []).forEach((l) => console.log('  + lead ' + l.id + ': ' + post([...c.evidence, l])));
+  } else {
+    const s = c.candidates.reduce((a, k) => a + c.expertConsensus[k.id], 0);
+    console.log('  candidates ' + c.candidates.length + ', expert weights sum ' + s.toFixed(2));
+  }
   (c.tops || []).forEach((t) => Object.entries(t.expert).forEach(([wn, e]) => {
     const w = c.wells.find((x) => x.name === wn);
     const d = e.absent ? 'absent' : e.depth === 'model' ? GW.modelTopAtWell(c.seismic.model, w, e.layer || t.name) : e.depth;

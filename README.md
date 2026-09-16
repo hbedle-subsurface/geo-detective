@@ -1,6 +1,10 @@
 # Geo-Detective
 
-A browser game for seminars. Each case shows a seismic section and, depending on tier, well logs. The player picks tops, reads the logs, and spreads confidence across two or more candidate interpretations. The debrief compares that distribution with a panel distribution, shows the confidence attached to what is actually known, and optionally lists which evidence was selected or passed over.
+A browser game for seminars, laid out as a detective's evidence board. Geologists work with incomplete and ambiguous subsurface data, so each case has several suspects (candidate interpretations) and no single piece of evidence settles it.
+
+On the board, the seismic line and well logs are pinned exhibits. The evidence is sticky notes circled on the exhibits and strung to the suspects they support or argue against. Confidence is shared among the suspects with sliders, and a chalkboard offers a limited number of leads (core, 3D seismic, biostratigraphy and others). An uncertainty timeline tracks how the spread of confidence changes as notes are examined.
+
+Closing the case produces a report. It compares the player's distribution with a panel distribution computed from likelihoods after the same evidence, shows how much each note and each lead narrows the field, and states what is known about the case with the confidence attached to it.
 
 Live site (once pushed): `https://hbedle-subsurface.github.io/geo-detective/`
 

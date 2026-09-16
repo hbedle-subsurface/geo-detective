@@ -182,7 +182,8 @@
       ],
       "cons": [
         "A single 2D line records only [[apparent-separation]]."
-      ]
+      ],
+      "sketch": "reverse-fault"
     },
     {
       "id": "strikeslip",
@@ -193,7 +194,8 @@
       ],
       "cons": [
         "Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."
-      ]
+      ],
+      "sketch": "strike-slip"
     },
     {
       "id": "twosands",
@@ -205,39 +207,71 @@
       "cons": [
         "W1 has only one sand at this level, 1.9 km away.",
         "The two W2 sands bracket the depth where the discontinuity crosses the well."
-      ]
+      ],
+      "sketch": "two-sands"
     }
   ],
-  "expertConsensus": {
-    "reverse": 0.76,
-    "strikeslip": 0.1,
-    "twosands": 0.14
-  },
   "evidence": [
     {
       "id": "up",
       "label": "Reflections higher east of the discontinuity",
-      "panelWeight": 3
+      "likelihood": {
+        "reverse": 0.9,
+        "strikeslip": 0.6,
+        "twosands": 0.5
+      },
+      "where": {
+        "x_m": 2200,
+        "z_m": 1000,
+        "rx_m": 550,
+        "rz_m": 500
+      }
     },
     {
       "id": "repeat",
       "label": "Two Sand B-like units in W2",
-      "panelWeight": 3
+      "likelihood": {
+        "reverse": 0.8,
+        "strikeslip": 0.3,
+        "twosands": 0.5
+      },
+      "where": {
+        "well": "W2",
+        "top_m": 805,
+        "base_m": 1010
+      }
     },
     {
       "id": "bracket",
       "label": "The two sands bracket the fault crossing in W2",
-      "panelWeight": 3
+      "likelihood": {
+        "reverse": 0.85,
+        "strikeslip": 0.4,
+        "twosands": 0.25
+      },
+      "where": {
+        "well": "W2",
+        "top_m": 890,
+        "base_m": 930
+      }
     },
     {
       "id": "cuttings",
       "label": "Cuttings descriptions identical at both levels",
-      "panelWeight": 1
+      "likelihood": {
+        "reverse": 0.6,
+        "strikeslip": 0.5,
+        "twosands": 0.5
+      }
     },
     {
       "id": "oneline",
       "label": "Only one 2D line",
-      "panelWeight": 2
+      "likelihood": {
+        "reverse": 0.5,
+        "strikeslip": 0.7,
+        "twosands": 0.5
+      }
     }
   ],
   "outcome": {
@@ -245,5 +279,37 @@
     "confidence": 0.9,
     "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."
   },
-  "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall."
+  "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall.",
+  "leads": [
+    {
+      "id": "dipmeter",
+      "label": "Dipmeter across the fault in W2",
+      "result": "Bed dips steepen sharply just above 910 m and return to regional dip below.",
+      "likelihood": {
+        "reverse": 0.8,
+        "strikeslip": 0.4,
+        "twosands": 0.2
+      }
+    },
+    {
+      "id": "biostrat",
+      "label": "Biostratigraphy of both sands",
+      "result": "Both sands contain the same microfossil zone.",
+      "likelihood": {
+        "reverse": 0.9,
+        "strikeslip": 0.3,
+        "twosands": 0.15
+      }
+    },
+    {
+      "id": "strikeline",
+      "label": "Second 2D line along strike",
+      "result": "The fault keeps the same up-to-east sense along strike.",
+      "likelihood": {
+        "reverse": 0.75,
+        "strikeslip": 0.3,
+        "twosands": 0.5
+      }
+    }
+  ]
 }

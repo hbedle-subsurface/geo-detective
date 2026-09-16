@@ -23,13 +23,14 @@
     DN: { label: 'Density–neutron', combo: ['RHOB', 'NPHI'] }
   };
   const TOP_COLORS = ['#841617', '#2F6690', '#4F7A28', '#A86A12', '#6D4C8D', '#1F7A7A'];
-  const CAND_COLORS = ['#841617', '#2F6690', '#A86A12', '#4F7A28', '#6D4C8D'];
+  const CAND_COLORS = ['#9E1B22', '#2F6690', '#A86A12', '#4F7A28', '#6D4C8D'];
 
   const $ = (s) => document.querySelector(s);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const cssv = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const pct = (v) => Math.round(v * 100) + '%';
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const S = { c: null, session: [], tier: 'easy' };
 
@@ -44,10 +45,17 @@
     else if (c.seismic.type === 'synthetic' && !c.seismic.model) errors.push('Synthetic seismic needs a "model".');
     else if (c.seismic.type === 'image' && !(c.seismic.src && c.seismic.width_m && c.seismic.depth_m)) errors.push('Image seismic needs "src", "width_m" and "depth_m".');
     if (!Array.isArray(c.candidates) || c.candidates.length < 2) errors.push('At least two "candidates" are required.');
-    const ec = c.expertConsensus || {};
-    (c.candidates || []).forEach((k) => { if (!(k.id in ec)) errors.push('No expert weight for candidate "' + k.id + '".'); });
-    const sum = Object.values(ec).reduce((a, b) => a + Number(b || 0), 0);
-    if (sum > 0 && Math.abs(sum - 1) > 0.01) warnings.push('Expert weights sum to ' + sum.toFixed(2) + ' and were normalized.');
+    const hasL = (c.evidence || []).some((e) => e.likelihood);
+    if (hasL) {
+      [...(c.evidence || []), ...(c.leads || [])].forEach((e) => (c.candidates || []).forEach((k) => {
+        if (!e.likelihood || e.likelihood[k.id] == null) warnings.push('"' + e.id + '" has no likelihood for "' + k.id + '"; 0.5 is used.');
+      }));
+    } else {
+      const ec = c.expertConsensus || {};
+      (c.candidates || []).forEach((k) => { if (!(k.id in ec)) errors.push('No evidence likelihoods and no expert weight for candidate "' + k.id + '".'); });
+      const sum = Object.values(ec).reduce((a, b) => a + Number(b || 0), 0);
+      if (sum > 0 && Math.abs(sum - 1) > 0.01) warnings.push('Expert weights sum to ' + sum.toFixed(2) + ' and were normalized.');
+    }
     const names = (c.wells || []).map((w) => w.name);
     (c.tops || []).forEach((t) => Object.keys(t.expert || {}).forEach((w) => { if (!names.includes(w)) errors.push('Top "' + t.name + '" refers to unknown well "' + w + '".'); }));
     (c.wells || []).forEach((w) => {
@@ -98,21 +106,48 @@
   }
 
   /* ---------- tiers and case list ---------- */
+  function caseNumber(c) { return String(GW.cases.indexOf(c) + 1).padStart(3, '0'); }
   function renderTiers() {
     const nav = $('#tiers');
     nav.innerHTML = GW.tiers.map((t) => {
       const n = GW.cases.filter((c) => c.tier === t.id).length;
       return '<button type="button" role="tab" aria-selected="' + (t.id === S.tier) + '" data-tier="' + esc(t.id) + '"' + (n ? '' : ' disabled') + '>' + esc(t.label) + '<span class="count">' + n + '</span></button>';
     }).join('');
-    renderCaseList();
-  }
-  function renderCaseList() {
     const t = GW.tiers.find((x) => x.id === S.tier) || {};
-    const list = GW.cases.filter((c) => c.tier === S.tier);
     $('#tierBlurb').textContent = t.blurb || '';
-    $('#caseList').innerHTML = list.map((c) =>
-      '<button type="button" class="case-card' + (S.c && S.c.id === c.id ? ' current' : '') + '" data-case="' + esc(c.id) + '"><span class="case-name">' + esc(c.title || c.id) + '</span><span class="case-sum">' + esc(c.summary || '') + '</span></button>'
+    $('#caseList').innerHTML = GW.cases.filter((c) => c.tier === S.tier).map((c) =>
+      '<button type="button" class="folder' + (S.c && S.c.id === c.id ? ' current' : '') + '" data-case="' + esc(c.id) + '"><span class="folder-no">Case ' + caseNumber(c) + '</span><span class="folder-name">' + esc(c.title || c.id) + '</span><span class="folder-sum">' + esc(c.summary || '') + '</span></button>'
     ).join('');
+  }
+
+  /* ---------- evidence model ---------- */
+  function allItems() { const c = S.c; return [...(c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(c.leads || []).map((e) => Object.assign({ kind: 'lead' }, e))]; }
+  function itemById(id) { return allItems().find((e) => e.id === id); }
+  function noteNo(id) {
+    const c = S.c, ei = (c.evidence || []).findIndex((e) => e.id === id);
+    if (ei >= 0) return 'E' + (ei + 1);
+    return 'L' + ((c.leads || []).findIndex((e) => e.id === id) + 1);
+  }
+  function examinedItems() { return S.c ? S.examined.map(itemById).filter(Boolean) : []; }
+  function usesLikelihood() { return (S.c.evidence || []).some((e) => e.likelihood); }
+  function posterior(ids) {
+    const cands = S.c.candidates;
+    if (!usesLikelihood()) return S.expertStatic;
+    const p = Object.fromEntries(cands.map((k) => [k.id, 1]));
+    ids.forEach((id) => { const e = itemById(id); if (e && e.likelihood) cands.forEach((k) => (p[k.id] *= e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5)); });
+    const s = cands.reduce((a, k) => a + p[k.id], 0) || 1;
+    cands.forEach((k) => (p[k.id] /= s));
+    return p;
+  }
+  function spread(dist) {
+    const v = Object.values(dist), n = v.length;
+    if (n < 2) return 0;
+    return -v.reduce((a, p) => a + (p > 0 ? p * Math.log(p) : 0), 0) / Math.log(n);
+  }
+  function diagnosticRatio(e) {
+    if (!e.likelihood) return 1;
+    const v = S.c.candidates.map((k) => (e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5));
+    return Math.max(...v) / Math.max(1e-6, Math.min(...v));
   }
 
   /* ---------- loading a case ---------- */
@@ -120,30 +155,29 @@
     const c = GW.cases.find((x) => x.id === id); if (!c) return;
     S.c = c; S.tier = c.tier;
     const cands = c.candidates;
-    const ec = c.expertConsensus; const esum = cands.reduce((a, k) => a + Number(ec[k.id] || 0), 0) || 1;
+    const ec = c.expertConsensus || {}, esum = cands.reduce((a, k) => a + Number(ec[k.id] || 0), 0) || 1;
     Object.assign(S, {
-      expert: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
+      expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      relied: new Set(), picks: {}, submitted: false, flatten: '', logType: 'GR',
-      viewed: new Set(['GR']), flattenUsed: false, seisLooked: false, weighed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
+      links: {}, examined: [], snaps: [], selected: null, anchors: {},
+      picks: {}, submitted: false, flatten: '', logType: 'GR',
+      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
     (c.tops || []).forEach((t) => (S.picks[t.name] = {}));
     S.activeTop = c.tops && c.tops.length ? c.tops[0].name : null;
-
     S.width_m = c.seismic.type === 'synthetic' ? c.seismic.model.width_m : c.seismic.width_m;
     S.depth_m = c.seismic.type === 'synthetic' ? c.seismic.model.depth_m : c.seismic.depth_m;
     S.refX = S.width_m / 2;
+    $('#game').hidden = false;
     $('#building').hidden = false;
+    $('#debrief').hidden = true;
     setTimeout(() => {
       if (S.c !== c) return;
       GW._built = GW._built || new WeakMap();
       if (c.seismic.type === 'synthetic') {
         if (!GW._built.has(c)) GW._built.set(c, GW.buildSection(c.seismic.model, c.seismic));
-        S.section = GW._built.get(c);
-        S._imgKey = null;
-      } else {
-        S.img = new Image(); S.img.onload = drawSeis; S.img.src = c.seismic.src;
-      }
+        S.section = GW._built.get(c); S._imgKey = null;
+      } else { S.img = new Image(); S.img.onload = drawSeis; S.img.src = c.seismic.src; }
       S.logs = {};
       (c.wells || []).forEach((w, i) => {
         S.logs[w.name] = w.logData || (c.seismic.type === 'synthetic' ? GW.buildWellLogs(c.seismic.model, w, (c.seismic.seed || 1) * 31 + i) : null);
@@ -161,100 +195,204 @@
       $('#building').hidden = true;
       renderCase();
     }, 30);
-
     try { history.replaceState(null, '', '#case=' + encodeURIComponent(c.id)); } catch (e) { /* file:// */ }
     renderTiers();
   }
 
   function renderCase() {
     const c = S.c;
-    $('#game').hidden = false;
-    $('#caseTitle').textContent = c.title || c.id;
+    $('#caseNo').textContent = 'Case ' + caseNumber(c);
     $('#caseTier').textContent = (GW.tiers.find((t) => t.id === c.tier) || { label: c.tier }).label;
+    $('#caseTitle').textContent = c.title || c.id;
     $('#caseBrief').innerHTML = rich(c.brief || '');
     const hasWells = c.wells && c.wells.length;
     $('#board').classList.toggle('no-wells', !hasWells);
     $('#logPanel').hidden = !hasWells;
-    $('#seisImageNote').hidden = c.seismic.type !== 'image';
+    $('#cmap').value = S.cmap; $('#domain').value = S.domain; $('#domain').disabled = c.seismic.type === 'image';
     $('#cmap').disabled = $('#gain').disabled = c.seismic.type === 'image';
-    $('#cmap').value = S.cmap; $('#domain').value = S.domain; $('#domain').disabled = c.seismic.type === 'image'; $('#gain').value = 1; $('#gainOut').textContent = '1.0×';
-
+    $('#gain').value = 1; $('#gainOut').textContent = '1.0×';
     if (hasWells) {
       const avail = new Set();
       Object.values(S.logs).forEach((L) => L && Object.keys(LOGS).forEach((k) => (LOGS[k].combo ? LOGS[k].combo.every((q) => L[q]) : L[k]) && avail.add(k)));
-      $('#logType').innerHTML = Object.entries(LOGS).map(([k, L]) =>
-        '<button type="button" data-log="' + k + '" aria-pressed="' + (k === S.logType) + '"' + (avail.has(k) ? '' : ' disabled') + ' title="' + L.label + '">' + (L.combo ? 'D–N' : k) + '</button>'
-      ).join('');
       S.availLogs = avail;
+      $('#logType').innerHTML = Object.entries(LOGS).map(([k, L]) =>
+        '<button type="button" data-log="' + k + '" aria-pressed="' + (k === S.logType) + '"' + (avail.has(k) ? '' : ' disabled') + ' title="' + L.label + '">' + (L.combo ? 'D–N' : k) + '</button>').join('');
       const tops = c.tops || [];
       $('#topWrap').hidden = !tops.length;
-      $('#activeTop').innerHTML = tops.map((t, i) => '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>').join('');
-      $('#topLegend').innerHTML = tops.map((t, i) => '<span><i style="background:' + TOP_COLORS[i % TOP_COLORS.length] + '"></i>' + esc(t.name) + '</span>').join('') + (tops.length ? '<span class="key-dash">Dashed line and band after submitting: panel pick ± uncertainty</span>' : '');
+      $('#activeTop').innerHTML = tops.map((t) => '<option value="' + esc(t.name) + '">' + esc(t.name) + '</option>').join('');
       $('#flatten').innerHTML = '<option value="">Depth</option>' + tops.map((t) => '<option value="' + esc(t.name) + '">Flattened on ' + esc(t.name) + '</option>').join('');
+      $('#topLegend').innerHTML = tops.map((t, i) => '<span><i style="background:' + TOP_COLORS[i % TOP_COLORS.length] + '"></i>' + esc(t.name) + '</span>').join('');
       $('#wellNotes').innerHTML = c.wells.map((w) =>
-        '<li><strong>' + esc(w.name) + '</strong> ±' + (w.depthUncertainty_m || 0) + ' m' + (w.logs ? ', logs: ' + w.logs.map((k) => LOGS[k].label.toLowerCase()).join(', ') + (w.quality === 'old' ? ' (older tools)' : '') : '') + '. ' + rich(w.note || '') + '</li>'
-      ).join('');
+        '<li><strong>' + esc(w.name) + '</strong> ±' + (w.depthUncertainty_m || 0) + ' m. ' + rich(w.note || '') + '</li>').join('');
     }
-
-    $('#candidates').innerHTML = c.candidates.map((k, i) =>
-      '<article class="cand" style="--cand:' + CAND_COLORS[i % CAND_COLORS.length] + '">' +
-      '<h4>' + esc(k.label) + '</h4><p>' + rich(k.description || '') + '</p>' +
-      '<div class="proscons"><div><h5>For</h5><ul>' + (k.pros || []).map((p) => '<li>' + rich(p) + '</li>').join('') + '</ul></div>' +
-      '<div><h5>Against</h5><ul>' + (k.cons || []).map((p) => '<li>' + rich(p) + '</li>').join('') + '</ul></div></div>' +
-      '<label class="wt"><span class="sr-only">Weight for ' + esc(k.label) + '</span><input type="range" min="0" max="100" step="1" value="50" data-cand="' + esc(k.id) + '"><output data-share="' + esc(k.id) + '"></output></label>' +
-      '</article>'
-    ).join('');
-
-    $('#evidence').innerHTML = (c.evidence || []).length
-      ? '<h4>Evidence relied on</h4><p class="howto">Tick the observations your distribution rests on. Optional; used by the evidence check in the debrief.</p>' + c.evidence.map((e) => '<label class="ev"><input type="checkbox" data-ev="' + esc(e.id) + '"> <span>' + rich(e.label) + '</span></label>').join('')
-      : '';
+    renderSuspects();
+    renderNotes();
+    renderNoteDetail();
+    renderLeads();
     $('#justifyWrap').hidden = !(c.requireJustification || c.tier === 'advanced');
     $('#justify').value = '';
     $('#submitMsg').textContent = '';
     $('#submit').disabled = false;
-    $('#debrief').hidden = true;
     document.body.classList.remove('locked');
     updateShares();
-    updateSteps();
-    requestAnimationFrame(() => { drawSeis(); drawLogs(); });
+    requestAnimationFrame(() => { drawSeis(); drawLogs(); drawTimeline(); drawStrings(); });
   }
 
-  /* ---------- step guide ---------- */
-  function updateSteps() {
-    const c = S.c; if (!c) return;
-    const hasWells = c.wells && c.wells.length, tops = c.tops || [];
-    let need = 0, made = 0;
-    tops.forEach((t) => (c.wells || []).forEach((w) => { need++; if (S.picks[t.name] && S.picks[t.name][w.name] != null) made++; }));
-    const st = {
-      1: { done: S.seisLooked, text: S.seisLooked ? 'Looked at' : 'Move over the section' },
-      2: hasWells && tops.length ? { done: made > 0, text: made + ' of ' + need + ' picks' + (made ? '' : ' so far') } : { skip: true, text: hasWells ? 'Logs only, no tops' : 'No wells in this case' },
-      3: { done: S.weighed, text: S.weighed ? 'Sliders set' : 'Sliders start equal' },
-      4: { done: S.submitted, text: S.submitted ? 'Debrief below' : (c.requireJustification || c.tier === 'advanced' ? 'Needs a justification' : 'Not yet') }
-    };
-    let current = 0;
-    [1, 2, 3, 4].forEach((k) => { if (!current && !st[k].done && !st[k].skip) current = k; });
-    document.querySelectorAll('#steps li').forEach((li) => {
-      const k = Number(li.dataset.step);
-      li.classList.toggle('done', !!st[k].done); li.classList.toggle('skip', !!st[k].skip); li.classList.toggle('current', k === current);
-      $('#st' + k).textContent = st[k].text;
-    });
+  /* ---------- suspects ---------- */
+  function renderSuspects() {
+    $('#suspects').innerHTML = S.c.candidates.map((k, i) =>
+      '<article class="suspect" data-cand="' + esc(k.id) + '" style="--cand:' + CAND_COLORS[i % CAND_COLORS.length] + '">' +
+      '<span class="pin"></span>' +
+      '<div class="mug">' + sketch(k.sketch) + '<span class="mug-no">' + String.fromCharCode(65 + i) + '</span></div>' +
+      '<div class="suspect-body"><h4>' + esc(k.label) + '</h4>' +
+      '<label class="wt"><span class="sr-only">Confidence in ' + esc(k.label) + '</span><input type="range" min="0" max="100" step="1" value="50" data-cand="' + esc(k.id) + '"><output data-share="' + esc(k.id) + '"></output></label>' +
+      '<details class="dossier"><summary>Dossier</summary><p>' + rich(k.description || '') + '</p>' +
+      '<h5>For</h5><ul>' + (k.pros || []).map((p) => '<li>' + rich(p) + '</li>').join('') + '</ul>' +
+      '<h5>Against</h5><ul>' + (k.cons || []).map((p) => '<li>' + rich(p) + '</li>').join('') + '</ul></details></div>' +
+      '</article>'
+    ).join('');
   }
-
-  /* ---------- weights ---------- */
   function shares() {
     const ids = S.c.candidates.map((k) => k.id);
     const sum = ids.reduce((a, id) => a + S.raw[id], 0);
-    return Object.fromEntries(ids.map((id) => [id, sum ? S.raw[id] / sum : 0]));
+    return Object.fromEntries(ids.map((id) => [id, sum ? S.raw[id] / sum : 1 / ids.length]));
   }
   function updateShares() {
     const sh = shares();
     document.querySelectorAll('output[data-share]').forEach((o) => (o.textContent = pct(sh[o.dataset.share])));
-    $('#distBar').innerHTML = S.c.candidates.map((k, i) =>
-      '<span style="flex-grow:' + Math.max(sh[k.id], 0.0001) + ';background:' + CAND_COLORS[i % CAND_COLORS.length] + '" title="' + esc(k.label) + ' ' + pct(sh[k.id]) + '"></span>'
-    ).join('');
-    $('#distLegend').innerHTML = S.c.candidates.map((k, i) =>
-      '<span><i style="background:' + CAND_COLORS[i % CAND_COLORS.length] + '"></i>' + esc(k.label) + ' ' + pct(sh[k.id]) + '</span>'
-    ).join('');
+    const sp = spread(sh);
+    $('#spreadFill').style.width = sp * 100 + '%';
+    $('#spreadVal').textContent = pct(sp);
+  }
+
+  /* ---------- evidence notes ---------- */
+  function renderNotes() {
+    const items = [...(S.c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(S.c.leads || []).filter((l) => S.examined.includes(l.id)).map((e) => Object.assign({ kind: 'lead' }, e))];
+    $('#notes').innerHTML = items.map((e, i) => {
+      const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
+      const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
+      return '<button type="button" class="note ' + e.kind + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i * 37) % 7) - 3) * 0.6 + 'deg">' +
+        '<span class="pin"></span><span class="note-no">' + noteNo(e.id) + (seen ? '' : ' · unexamined') + '</span>' +
+        '<span class="note-text">' + (seen ? rich(e.label) : esc(e.label)) + '</span>' +
+        (tags ? '<span class="tags">' + tags + '</span>' : '') + '</button>';
+    }).join('');
+  }
+  function renderNoteDetail() {
+    const box = $('#noteDetail'), e = S.selected && itemById(S.selected);
+    if (!e) { box.innerHTML = '<p class="howto">Select a note to examine it. Notes that point at the data are circled on the exhibits.</p>'; return; }
+    const links = S.links[e.id] || {};
+    const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A.') : '';
+    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + (e.kind === 'lead' ? ' · lead' : '') + '</span><span class="where">' + where + '</span></div>' +
+      (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
+      '<p class="howto">String this note to the suspects it bears on:</p>' +
+      '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
+        const v = links[k.id] || '';
+        return '<div class="linkrow"><span class="lk-name"><b>' + String.fromCharCode(65 + ci) + '</b> ' + esc(k.label) + '</span><span class="seg small" role="group" aria-label="' + esc(k.label) + '">' +
+          ['for', '', 'against'].map((d) => '<button type="button" data-link="' + d + '" data-cand="' + esc(k.id) + '" aria-pressed="' + (v === d) + '">' + (d === 'for' ? 'Supports' : d === 'against' ? 'Against' : '—') + '</button>').join('') + '</span></div>';
+      }).join('') + '</div>';
+  }
+  function examine(id) {
+    if (!S.submitted && !S.examined.includes(id)) {
+      S.snaps.push(shares());
+      S.examined.push(id);
+    }
+    S.selected = id;
+    renderNotes(); renderNoteDetail(); renderLeads();
+    drawSeis(); drawLogs(); drawTimeline(); drawStrings();
+  }
+
+  /* ---------- leads ---------- */
+  function maxLeads() { return S.c.maxLeads != null ? S.c.maxLeads : 2; }
+  function renderLeads() {
+    const leads = S.c.leads || [];
+    $('#leadsCard').hidden = !leads.length;
+    const used = leads.filter((l) => S.examined.includes(l.id)).length, left = maxLeads() - used;
+    $('#leadsLeft').textContent = left > 0 ? left + ' of ' + maxLeads() + ' requests left' : 'No requests left';
+    $('#leads').innerHTML = leads.map((l, i) => {
+      const got = S.examined.includes(l.id);
+      return '<li class="' + (got ? 'got' : '') + '"><span class="lead-no">L' + (i + 1) + '</span><span class="lead-label">' + esc(l.label) + '</span>' +
+        (got ? '<button type="button" class="chalk-btn" data-open="' + esc(l.id) + '">Open</button>'
+          : '<button type="button" class="chalk-btn" data-lead="' + esc(l.id) + '"' + (left > 0 && !S.submitted ? '' : ' disabled') + '>Request</button>') + '</li>';
+    }).join('');
+  }
+
+  /* ---------- timeline ---------- */
+  function drawTimeline(target) {
+    const svg = target || $('#timeline'); if (!svg || !S.c) return;
+    const W = target ? 640 : 260, H = target ? 220 : 150, m = { l: 34, r: 10, t: 12, b: 30 };
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    const n = S.examined.length;
+    const player = S.snaps.slice(0, n).map(spread);
+    player.push(spread(S.submitted ? S.player : shares()));
+    const panel = [];
+    for (let j = 0; j <= n; j++) panel.push(spread(posterior(S.examined.slice(0, j))));
+    const X = (j) => m.l + (n ? (j / n) * (W - m.l - m.r) : (W - m.l - m.r) / 2);
+    const Y = (v) => m.t + (1 - v) * (H - m.t - m.b);
+    let g = '';
+    [0, 0.5, 1].forEach((v) => { g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" class="tl-grid"/><text x="' + (m.l - 5) + '" y="' + (Y(v) + 4) + '" class="tl-ax" text-anchor="end">' + v * 100 + '</text>'; });
+    for (let j = 0; j <= n; j++) g += '<text x="' + X(j) + '" y="' + (H - m.b + 16) + '" class="tl-ax" text-anchor="middle">' + (j ? noteNo(S.examined[j - 1]) : 'Start') + '</text>';
+    const path = (arr) => arr.map((v, j) => (j ? 'L' : 'M') + X(j).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+    if (S.submitted || target) g += '<path d="' + path(panel) + '" class="tl-panel"/>' + panel.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="3" class="tl-panel-dot"/>').join('');
+    g += '<path d="' + path(player) + '" class="tl-you"/>' + player.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="' + (j === n && !S.submitted ? 4.5 : 3.5) + '" class="tl-you-dot' + (j === n && !S.submitted ? ' live' : '') + '"/>').join('');
+    svg.innerHTML = g;
+  }
+
+  /* ---------- red string ---------- */
+  function drawStrings() {
+    const board = $('#board'), svg = $('#strings');
+    if (!board || !svg || !S.c || getComputedStyle(svg).display === 'none') return;
+    const br = board.getBoundingClientRect();
+    svg.setAttribute('width', br.width); svg.setAttribute('height', br.height);
+    svg.setAttribute('viewBox', '0 0 ' + br.width + ' ' + br.height);
+    const center = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2 - br.left, y: r.top + r.height / 2 - br.top }; };
+    let out = '';
+    const line = (a, b, cls) => {
+      const sag = Math.min(40, Math.hypot(b.x - a.x, b.y - a.y) * 0.08);
+      out += '<path d="M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + ((a.x + b.x) / 2).toFixed(1) + ' ' + ((a.y + b.y) / 2 + sag).toFixed(1) + ' ' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + '" class="' + cls + '"/>';
+      out += '<circle cx="' + b.x.toFixed(1) + '" cy="' + b.y.toFixed(1) + '" r="3.5" class="tack"/>';
+    };
+    S.examined.forEach((id) => {
+      const note = document.querySelector('.note[data-note="' + CSS.escape(id) + '"] .pin'); if (!note) return;
+      const a = center(note), sel = id === S.selected ? ' sel' : '';
+      const an = S.anchors[id];
+      if (an) {
+        const cv = an.el === 'seis' ? $('#seis') : $('#logs');
+        if (cv && cv.offsetParent) { const r = cv.getBoundingClientRect(); line(a, { x: r.left - br.left + an.x, y: r.top - br.top + an.y }, 'str data' + sel); }
+      }
+      Object.entries(S.links[id] || {}).forEach(([cand, dir]) => {
+        const pin = document.querySelector('.suspect[data-cand="' + CSS.escape(cand) + '"] .pin');
+        if (pin && dir) line(a, center(pin), 'str ' + dir + sel);
+      });
+    });
+    svg.innerHTML = out;
+  }
+
+  /* ---------- suspect sketches ---------- */
+  function sketch(key) {
+    const L = (d, extra) => '<path d="' + d + '" ' + (extra || '') + '/>';
+    const layers = (fn) => [18, 32, 46, 60].map(fn).join('');
+    let body = '';
+    switch (key) {
+      case 'normal-fault': case 'reverse-fault': {
+        const off = key === 'normal-fault' ? 11 : -11, xf = (y) => 72 - (y - 4) * 0.34;
+        body = layers((y) => L('M4 ' + y + ' L' + xf(y) + ' ' + y) + (y + off < 70 && y + off > 4 ? L('M' + xf(y + off) + ' ' + (y + off) + ' L116 ' + (y + off)) : '')) + L('M72 4 L50 68', 'class="flt"');
+        break;
+      }
+      case 'growth-fault': body = [14, 26, 38, 50].map((y) => L('M4 ' + y + ' L' + (72 - (y - 4) * 0.34) + ' ' + y) + L('M' + (72 - (y * 1.3 - 4) * 0.34) + ' ' + y * 1.3 + ' L116 ' + y * 1.3)).join('') + L('M72 4 L50 68', 'class="flt"'); break;
+      case 'wedge': body = [12, 24, 36, 48].map((y, i) => L('M4 ' + y + ' L60 ' + (y + i * 2) + ' L116 ' + (y + i * 5 + 8))).join('') + L('M70 4 L52 68', 'class="flt"'); break;
+      case 'strike-slip': body = L('M60 4 L60 68', 'class="flt"') + L('M40 52 L40 20 M34 28 L40 20 L46 28') + L('M80 20 L80 52 M74 44 L80 52 L86 44') + L('M8 60 L56 40') + L('M64 50 L112 30'); break;
+      case 'erosion': body = L('M4 18 L116 18') + [34, 48, 62].map((y) => L('M4 ' + y + ' L' + (54 - (62 - y) * 0.4) + ' ' + y)).join('') + L('M4 26 L40 26 C58 26 60 60 80 64 L116 64', 'class="flt"') + L('M84 40 L116 40'); break;
+      case 'withdrawal': body = [16, 30, 44].map((y) => L('M4 ' + y + ' C40 ' + y + ' 70 ' + (y + 8) + ' 116 ' + (y + 10))).join('') + L('M4 56 C50 56 80 64 116 66 L116 70 L4 70 Z', 'class="body"'); break;
+      case 'fold': body = [22, 36, 50, 64].map((y) => L('M4 ' + y + ' C40 ' + (y - 16) + ' 80 ' + (y - 16) + ' 116 ' + y)).join('') + L('M60 6 L60 70', 'class="axis"'); break;
+      case 'drape': body = L('M34 62 C50 38 70 38 86 62 Z', 'class="body"') + [20, 34, 48].map((y, i) => L('M4 ' + (y + 6) + ' C44 ' + (y + 6) + ' 48 ' + (y - 8 + i * 3) + ' 60 ' + (y - 8 + i * 3) + ' C72 ' + (y - 8 + i * 3) + ' 76 ' + (y + 6) + ' 116 ' + (y + 6))).join('') + L('M4 62 L116 62'); break;
+      case 'diapir': body = L('M44 70 C44 40 52 22 60 22 C68 22 76 40 76 70 Z', 'class="body"') + [16, 30, 46].map((y) => L('M4 ' + (y + 8) + ' C30 ' + (y + 8) + ' 40 ' + (y - 2) + ' 50 ' + (y - 4)) + L('M70 ' + (y - 4) + ' C80 ' + (y - 2) + ' 90 ' + (y + 8) + ' 116 ' + (y + 8))).join(''); break;
+      case 'valley': body = [16, 50, 62].map((y) => L('M4 ' + y + ' L116 ' + y)).join('') + L('M4 30 L116 30', 'stroke-dasharray="0"') + L('M24 24 C36 62 84 62 96 24 Z', 'class="body"') + L('M4 24 L116 24'); break;
+      case 'channel-stack': body = [14, 60].map((y) => L('M4 ' + y + ' L116 ' + y)).join('') + L('M14 26 C26 56 66 56 78 26 Z', 'class="body"') + L('M52 20 C60 40 88 40 98 20 Z', 'class="body"') + L('M4 26 L116 26'); break;
+      case 'collapse': body = [18, 32, 46].map((y, i) => L('M4 ' + y + ' C40 ' + y + ' 46 ' + (y + 14 - i * 3) + ' 60 ' + (y + 14 - i * 3) + ' C74 ' + (y + 14 - i * 3) + ' 80 ' + y + ' 116 ' + y)).join('') + L('M40 62 C50 56 70 56 80 62 L80 70 L40 70 Z', 'class="void"'); break;
+      case 'two-sands': body = L('M60 4 L60 70', 'class="axis"') + L('M50 18 L70 18 L70 28 L50 28 Z', 'class="body"') + L('M50 44 L70 44 L70 54 L50 54 Z', 'class="body"') + L('M4 36 L116 36'); break;
+      default: body = '<text x="60" y="48" text-anchor="middle" class="q">?</text>';
+    }
+    return '<svg viewBox="0 0 120 72" class="sketch" aria-hidden="true">' + body + '</svg>';
   }
 
   /* ---------- seismic canvas ---------- */
@@ -389,6 +527,32 @@
         }
       });
     });
+
+    // circles for examined evidence that points at the section
+    S.anchors = S.anchors || {};
+    examinedItems().forEach((e) => {
+      const w = e.where; if (!w || w.well || w.x_m == null) return;
+      const cx = X(w.x_m), zc = w.z_m, rz = w.rz_m || 150;
+      const y1 = Yz(w.x_m, zc - rz), y2 = Yz(w.x_m, zc + rz), cy = (y1 + y2) / 2, ry = Math.max(10, (y2 - y1) / 2);
+      const rx = Math.max(12, ((w.rx_m || 300) / S.width_m) * pw);
+      circleMark(ctx, cx, cy, rx, ry, e.id === S.selected, noteNo(e.id));
+      S.anchors[e.id] = { el: 'seis', x: cx + rx * 0.72, y: cy - ry * 0.72 };
+    });
+  }
+
+  function circleMark(ctx, cx, cy, rx, ry, strong, label) {
+    ctx.save();
+    ctx.strokeStyle = '#C0161F'; ctx.lineWidth = strong ? 3.2 : 2.2; ctx.globalAlpha = strong ? 1 : 0.85;
+    for (let k = 0; k < 2; k++) {
+      ctx.beginPath();
+      ctx.ellipse(cx + k * 1.5, cy - k, rx + k * 3, ry + k * 2, -0.08 + k * 0.1, 0.15 + k * 0.3, Math.PI * 2 + 0.1 * k);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.fillStyle = '#C0161F'; ctx.font = '700 12px ' + cssv('--sans'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tx = cx - rx * 0.8, ty = cy - ry - 8;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(tx - 14, ty - 8, 28, 16);
+    ctx.fillStyle = '#C0161F'; ctx.fillText(label, tx, ty);
+    ctx.restore();
   }
 
   /* ---------- log canvas ---------- */
@@ -497,6 +661,15 @@
         ctx.beginPath(); ctx.moveTo(xa, Y(pa - flatShift(a))); ctx.lineTo(xb, Y(pb - flatShift(b))); ctx.stroke();
       }
     });
+    examinedItems().forEach((e) => {
+      const w = e.where; if (!w || !w.well) return;
+      const k = c.wells.findIndex((q) => q.name === w.well); if (k < 0) return;
+      const x0 = m.l + k * (tw + gap), sh = flatShift(w.well);
+      const y1 = clamp(Y(w.top_m - sh), m.t + 8, m.t + ph - 8), y2 = clamp(Y(w.base_m - sh), m.t + 8, m.t + ph - 8);
+      const cx = x0 + tw / 2, cy = (y1 + y2) / 2, rx = tw / 2 + 4, ry = Math.max(12, (y2 - y1) / 2 + 6);
+      circleMark(ctx, cx, cy, rx, ry, e.id === S.selected, noteNo(e.id));
+      S.anchors[e.id] = { el: 'logs', x: cx + rx * 0.72, y: cy - ry * 0.72 };
+    });
     if (S.hoverY != null && S.hoverY > m.t && S.hoverY < m.t + ph) {
       ctx.strokeStyle = cssv('--red'); ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(m.l, S.hoverY + 0.5); ctx.lineTo(W - m.r, S.hoverY + 0.5); ctx.stroke(); ctx.globalAlpha = 1;
@@ -523,39 +696,48 @@
       if (S.flatten === S.activeTop) return; // flattened top cannot be moved while flattened
       P[w.name] = Math.round(d);
     }
-    drawLogs(); drawSeis(); updateSteps();
+    drawLogs(); drawSeis(); drawStrings();
   }
 
-  /* ---------- submit and debrief ---------- */
-  function effN(dist) { const s = Object.values(dist).reduce((a, p) => a + p * p, 0); return s ? 1 / s : 0; }
-
+  /* ---------- closing the case ---------- */
   function submit() {
-    const c = S.c, sh = shares();
-    if (Object.values(sh).every((v) => v === 0)) { $('#submitMsg').textContent = 'All weights are zero. Set at least one weight above zero.'; return; }
+    const c = S.c;
     const just = $('#justify').value.trim();
-    if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This tier asks for a written justification of at least a sentence or two before submitting.'; $('#justify').focus(); return; }
-    S.submitted = true; S.player = sh; S.justification = just;
+    if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This case needs a written justification of at least a sentence or two.'; $('#justify').focus(); return; }
+    S.submitted = true; S.player = shares(); S.justification = just;
     document.body.classList.add('locked');
     $('#submit').disabled = true; $('#submitMsg').textContent = '';
-    renderDebrief();
-    drawSeis(); drawLogs(); updateSteps();
+    renderDebrief(); renderLeads();
+    drawSeis(); drawLogs(); drawTimeline(); drawStrings();
     $('#debrief').hidden = false;
-    $('#debrief').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    $('#debrief').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
   }
 
   function renderDebrief() {
-    const c = S.c, P = S.player, E = S.expert;
+    const c = S.c, P = S.player, E = posterior(S.examined), bayes = usesLikelihood();
+    const Eall = bayes ? posterior((c.evidence || []).map((e) => e.id)) : E;
     const overlap = c.candidates.reduce((a, k) => a + Math.min(P[k.id], E[k.id]), 0);
     const lead = c.candidates.reduce((a, k) => (E[k.id] > E[a.id] ? k : a), c.candidates[0]);
     const pLead = c.candidates.reduce((a, k) => (P[k.id] > P[a.id] ? k : a), c.candidates[0]);
-
+    const bar = (who, v, col, cls) => '<div class="cmp-bar ' + cls + '"><span class="who">' + who + '</span><span class="track"><span class="fill" style="width:' + v * 100 + '%;background:' + col + '"></span></span><span class="val">' + pct(v) + '</span></div>';
     const rows = c.candidates.map((k, i) => {
       const col = CAND_COLORS[i % CAND_COLORS.length];
-      return '<div class="cmp-row"><div class="cmp-label">' + esc(k.label) + '</div><div class="cmp-bars">' +
-        '<div class="cmp-bar"><span class="who">You</span><span class="track"><span class="fill" style="width:' + P[k.id] * 100 + '%;background:' + col + '"></span></span><span class="val">' + pct(P[k.id]) + '</span></div>' +
-        '<div class="cmp-bar expert"><span class="who">Panel</span><span class="track"><span class="fill" style="width:' + E[k.id] * 100 + '%;background:' + col + '"></span></span><span class="val">' + pct(E[k.id]) + '</span></div>' +
-        '</div></div>';
+      return '<div class="cmp-row"><div class="cmp-label"><b>' + String.fromCharCode(65 + i) + '</b> ' + esc(k.label) + '</div><div class="cmp-bars">' +
+        bar('You', P[k.id], col, '') + bar('Panel', E[k.id], col, 'expert') + (bayes ? bar('Panel, all evidence', Eall[k.id], col, 'expert all') : '') + '</div></div>';
     }).join('');
+
+    let narrowing = '';
+    if (bayes) {
+      const base = 1;
+      const rowsN = allItems().map((e) => {
+        const sp = spread(posterior([e.id]));
+        const drop = Math.max(0, base - sp);
+        return '<tr class="' + (S.examined.includes(e.id) ? '' : 'unseen') + '"><td>' + noteNo(e.id) + '</td><td>' + (e.kind === 'lead' ? esc(e.label) + '<div class="subnote">' + esc(e.result || '') + '</div>' : esc(e.label)) + '</td><td>' +
+          (e.kind === 'lead' ? (S.examined.includes(e.id) ? 'Requested' : 'Not requested') : (S.examined.includes(e.id) ? 'Examined' : 'Not examined')) + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop * 400) + '%"></span></span> ' + (drop * 100).toFixed(0) + '</td></tr>';
+      }).join('');
+      narrowing = '<h4>How much each note narrows the field</h4><p class="howto">Reduction in the panel\u2019s [[spread|spread of confidence]], in percentage points, from that note alone starting from equal weights. Notes near zero are consistent with every suspect.</p>'.replace(/\[\[[^\]]+\]\]/g, (m) => rich(m)) +
+        '<div class="table-wrap"><table class="narrow"><thead><tr><th></th><th>Note</th><th>Status</th><th>Narrowing</th></tr></thead><tbody>' + rowsN + '</tbody></table></div>';
+    }
 
     let topsTable = '';
     if (c.tops && c.tops.length) {
@@ -563,59 +745,77 @@
       c.tops.forEach((t) => c.wells.forEach((w) => {
         const e = S.expertTops[t.name][w.name]; if (!e) return;
         const p = S.picks[t.name][w.name];
-        let panel = e.absent ? 'Absent' : Math.round(e.depth) + ' ± ' + e.unc;
         let diff = '';
         if (e.absent) diff = p == null ? 'Both absent' : 'Picked where panel has none';
         else if (p == null) diff = 'Not picked';
         else { const dd = p - e.depth; diff = (dd > 0 ? '+' : '') + Math.round(dd) + ' m' + (Math.abs(dd) <= e.unc ? ' (within ±' + e.unc + ')' : ''); }
-        trs.push('<tr><td>' + esc(t.name) + '</td><td>' + esc(w.name) + '</td><td>' + (p == null ? '–' : p) + '</td><td>' + panel + '</td><td>' + diff + (e.note ? '<div class="note">' + esc(e.note) + '</div>' : '') + '</td></tr>');
+        trs.push('<tr><td>' + esc(t.name) + '</td><td>' + esc(w.name) + '</td><td>' + (p == null ? '–' : p) + '</td><td>' + (e.absent ? 'Absent' : Math.round(e.depth) + ' ± ' + e.unc) + '</td><td>' + diff + (e.note ? '<div class="subnote">' + esc(e.note) + '</div>' : '') + '</td></tr>');
       }));
       topsTable = '<h4>Tops</h4><div class="table-wrap"><table class="tops"><thead><tr><th>Top</th><th>Well</th><th>Your pick (m)</th><th>Panel (m)</th><th>Difference</th></tr></thead><tbody>' + trs.join('') + '</tbody></table></div>';
     }
 
     $('#debriefBody').innerHTML =
+      '<p class="stamp">Case ' + caseNumber(c) + ' · ' + esc(c.title) + '</p>' +
+      '<h4>Confidence</h4>' +
+      (bayes ? '<p class="howto">Panel: the panel\u2019s distribution after the same ' + S.examined.length + ' note' + (S.examined.length === 1 ? '' : 's') + ' examined here. Panel, all evidence: after every evidence note, without leads.</p>' : '') +
       '<div class="cmp">' + rows + '</div>' +
       '<dl class="metrics">' +
       '<div><dt>' + rich('[[overlap|Overlap with panel]]') + '</dt><dd>' + pct(overlap) + '</dd></div>' +
-      '<div><dt>' + rich('[[effective-number|Effective number of interpretations]]') + '</dt><dd>' + effN(P).toFixed(1) + ' <small>you</small> / ' + effN(E).toFixed(1) + ' <small>panel</small></dd></div>' +
+      '<div><dt>' + rich('[[spread|Spread of confidence]]') + '</dt><dd>' + pct(spread(P)) + ' <small>you</small> / ' + pct(spread(E)) + ' <small>panel</small></dd></div>' +
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
+      (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
+      narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
         '<p class="basis">' + rich(c.outcome.basis || '') + '</p></div>' : '') +
       topsTable +
       (c.debrief ? '<h4>Notes</h4><p>' + rich(c.debrief) + '</p>' : '') +
       (S.justification ? '<h4>Your justification</h4><blockquote>' + esc(S.justification) + '</blockquote>' : '');
+    if (bayes) drawTimeline($('#timelineBig'));
 
-    $('#biasToggle').checked = false;
-    $('#bias').hidden = true;
-    $('#bias').innerHTML = biasCheck();
-
+    $('#biasToggle').checked = false; $('#bias').hidden = true;
+    $('#bias').innerHTML = biasCheck(E);
     S.session = S.session.filter((r) => r.id !== c.id);
-    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, you: effN(P), panel: effN(E) });
+    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.examined.length, you: spread(P), panel: spread(E) });
     renderSession();
   }
 
-  function biasCheck() {
-    const c = S.c, items = [];
-    const ev = c.evidence || [];
-    const missed = ev.filter((e) => e.panelWeight >= 3 && !S.relied.has(e.id));
-    const weak = ev.filter((e) => e.panelWeight <= 1 && S.relied.has(e.id));
-    if (ev.length) {
-      items.push('<li><strong>Rated strongly diagnostic by the panel, not selected:</strong> ' + (missed.length ? missed.map((e) => rich(e.label)).join('; ') : 'none') + '</li>');
-      items.push('<li><strong>Selected, rated weakly or not diagnostic by the panel:</strong> ' + (weak.length ? weak.map((e) => rich(e.label) + ' (' + e.panelWeight + ' of 3)').join('; ') : 'none') + '</li>');
+  function biasCheck(E) {
+    const c = S.c, items = [], bayes = usesLikelihood();
+    if (bayes) {
+      const unseen = (c.evidence || []).filter((e) => diagnosticRatio(e) >= 2 && !S.examined.includes(e.id));
+      items.push('<li><strong>Diagnostic notes not examined:</strong> ' + (unseen.length ? unseen.map((e) => noteNo(e.id) + ' ' + esc(e.label)).join('; ') : 'none') + '</li>');
+      const flips = [], idle = [];
+      S.examined.forEach((id) => {
+        const e = itemById(id), links = S.links[id] || {};
+        if (!e || !e.likelihood) return;
+        const vals = c.candidates.map((k) => (e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5)), mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+        Object.entries(links).forEach(([cand, dir]) => {
+          const l = e.likelihood[cand] != null ? e.likelihood[cand] : 0.5, name = (c.candidates.find((k) => k.id === cand) || {}).label;
+          if ((dir === 'for' && l < mean - 0.05) || (dir === 'against' && l > mean + 0.05)) flips.push(noteNo(id) + ' strung ' + (dir === 'for' ? 'in support of ' : 'against ') + esc(name));
+        });
+        if (Object.keys(links).length && diagnosticRatio(e) < 1.25) idle.push(noteNo(id) + ' ' + esc(e.label));
+      });
+      items.push('<li><strong>Strings the panel reads in the opposite direction:</strong> ' + (flips.length ? flips.join('; ') : 'none') + '</li>');
+      items.push('<li><strong>Strung notes the panel treats as consistent with every suspect:</strong> ' + (idle.length ? idle.join('; ') : 'none') + '</li>');
+      const leads = (c.leads || []);
+      if (leads.length) {
+        const best = leads.reduce((a, l) => (spread(posterior([l.id])) < spread(posterior([a.id])) ? l : a), leads[0]);
+        items.push('<li><strong>Lead that narrows the panel\u2019s field most on its own:</strong> ' + noteNo(best.id) + ' ' + esc(best.label) + (S.examined.includes(best.id) ? ' (requested)' : ' (not requested)') + '</li>');
+      }
     }
     if (c.wells && c.wells.length) {
       const never = [...S.availLogs].filter((k) => !LOGS[k].combo && !S.viewed.has(k));
       items.push('<li><strong>Log types never displayed:</strong> ' + (never.length ? never.map((k) => LOGS[k].label).join(', ') : 'none') + '</li>');
-      const expected = [], made = [];
-      (c.tops || []).forEach((t) => c.wells.forEach((w) => { const e = S.expertTops[t.name][w.name]; if (e && !e.absent) { expected.push(1); if (S.picks[t.name][w.name] != null) made.push(1); } }));
-      if (expected.length) items.push('<li><strong>Tops picked:</strong> ' + made.length + ' of ' + expected.length + ' that the panel picked' + (S.flattenUsed ? '; display was flattened at least once' : '; display was not flattened') + '</li>');
+      let need = 0, made = 0;
+      (c.tops || []).forEach((t) => c.wells.forEach((w) => { const e = S.expertTops[t.name][w.name]; if (e && !e.absent) { need++; if (S.picks[t.name][w.name] != null) made++; } }));
+      if (need) items.push('<li><strong>Tops picked:</strong> ' + made + ' of ' + need + ' that the panel picked' + (S.flattenUsed ? '; display was flattened at least once' : '; display was not flattened') + '</li>');
     }
-    const P = S.player, E = S.expert;
+    const P = S.player;
     const over = c.candidates.filter((k) => P[k.id] - E[k.id] >= 0.2), under = c.candidates.filter((k) => E[k.id] - P[k.id] >= 0.2);
-    items.push('<li><strong>Interpretations weighted 20 points or more above the panel:</strong> ' + (over.length ? over.map((k) => esc(k.label)).join(', ') : 'none') + '</li>');
-    items.push('<li><strong>Interpretations weighted 20 points or more below the panel:</strong> ' + (under.length ? under.map((k) => esc(k.label)).join(', ') : 'none') + '</li>');
+    items.push('<li><strong>Suspects weighted 20 points or more above the panel:</strong> ' + (over.length ? over.map((k) => esc(k.label)).join(', ') : 'none') + '</li>');
+    items.push('<li><strong>Suspects weighted 20 points or more below the panel:</strong> ' + (under.length ? under.map((k) => esc(k.label)).join(', ') : 'none') + '</li>');
     return '<ul>' + items.join('') + '</ul>';
   }
 
@@ -623,31 +823,29 @@
     if (!S.session.length) { $('#session').hidden = true; return; }
     $('#session').hidden = false;
     $('#sessionBody').innerHTML = S.session.map((r) =>
-      '<tr><td>' + esc(r.title) + '</td><td>' + esc((GW.tiers.find((t) => t.id === r.tier) || { label: r.tier }).label) + '</td><td>' + pct(r.overlap) + '</td><td>' + r.you.toFixed(1) + ' / ' + r.panel.toFixed(1) + '</td></tr>'
-    ).join('');
+      '<tr><td>' + esc(r.title) + '</td><td>' + esc((GW.tiers.find((t) => t.id === r.tier) || { label: r.tier }).label) + '</td><td>' + r.notes + '</td><td>' + pct(r.overlap) + '</td><td>' + pct(r.you) + ' / ' + pct(r.panel) + '</td></tr>').join('');
   }
 
   function nextCase() {
     const order = [];
     GW.tiers.forEach((t) => GW.cases.filter((c) => c.tier === t.id).forEach((c) => order.push(c.id)));
-    const i = order.indexOf(S.c.id);
-    loadCase(order[(i + 1) % order.length]);
+    loadCase(order[(order.indexOf(S.c.id) + 1) % order.length]);
     window.scrollTo({ top: 0 });
   }
 
   /* ---------- case file pop-out ---------- */
   function popCase() {
     const c = S.c;
-    const win = window.open('', 'gw_casefile', 'width=560,height=780');
+    const win = window.open('', 'gd_casefile', 'width=560,height=780');
     if (!win) { $('#submitMsg').textContent = 'The browser blocked the new window. Allow pop-ups for this page to open the case file separately.'; return; }
     const terms = new Set();
     const plain = (s) => { termsIn(s).forEach((k) => terms.add(k)); return esc(s).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, k, l) => { const g = gloss(k); return '<b>' + (l || (g ? g[0].toLowerCase() : k)) + '</b>'; }); };
-    let body = '<h1>' + esc(c.title) + '</h1><p>' + plain(c.brief || '') + '</p>';
-    body += c.candidates.map((k) => '<h2>' + esc(k.label) + '</h2><p>' + plain(k.description || '') + '</p><h3>For</h3><ul>' + (k.pros || []).map((p) => '<li>' + plain(p) + '</li>').join('') + '</ul><h3>Against</h3><ul>' + (k.cons || []).map((p) => '<li>' + plain(p) + '</li>').join('') + '</ul>').join('');
+    let body = '<p class="no">Case ' + caseNumber(c) + '</p><h1>' + esc(c.title) + '</h1><p>' + plain(c.brief || '') + '</p>';
+    body += '<h2>Suspects</h2>' + c.candidates.map((k, i) => '<h3>' + String.fromCharCode(65 + i) + ' · ' + esc(k.label) + '</h3><p>' + plain(k.description || '') + '</p><h4>For</h4><ul>' + (k.pros || []).map((p) => '<li>' + plain(p) + '</li>').join('') + '</ul><h4>Against</h4><ul>' + (k.cons || []).map((p) => '<li>' + plain(p) + '</li>').join('') + '</ul>').join('');
     if (c.wells && c.wells.length) body += '<h2>Wells</h2><ul>' + c.wells.map((w) => '<li><b>' + esc(w.name) + '</b> ±' + (w.depthUncertainty_m || 0) + ' m. ' + plain(w.note || '') + '</li>').join('') + '</ul>';
     if (terms.size) body += '<h2>Terms</h2><dl>' + [...terms].map((k) => gloss(k)).filter(Boolean).map((g) => '<dt>' + esc(g[0]) + '</dt><dd>' + esc(g[1]) + '</dd>').join('') + '</dl>';
     win.document.open();
-    win.document.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Case file: ' + esc(c.title) + '</title><style>body{font:15px/1.55 "Source Sans 3","Segoe UI",system-ui,sans-serif;color:#16191C;max-width:62ch;margin:24px auto;padding:0 18px}h1{font:600 26px/1.2 "Source Serif 4",Georgia,serif;margin:0 0 8px}h2{font:600 18px/1.3 "Source Serif 4",Georgia,serif;color:#841617;margin:22px 0 4px}h3{font-size:13px;color:#5C6670;margin:8px 0 0}ul{margin:4px 0;padding-left:20px}dt{font-weight:600;margin-top:8px}dd{margin:0 0 0 0;color:#333}</style></head><body>' + body + '</body></html>');
+    win.document.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Case file: ' + esc(c.title) + '</title><style>body{font:15px/1.55 "Source Sans 3","Segoe UI",system-ui,sans-serif;color:#16191C;background:#f3ecdc;max-width:62ch;margin:24px auto;padding:0 18px}.no{font-family:"Special Elite","Courier New",monospace;color:#841617;margin:0}h1{font:600 26px/1.2 "Source Serif 4",Georgia,serif;margin:0 0 8px}h2{font:18px/1.3 "Special Elite","Courier New",monospace;color:#841617;margin:22px 0 4px;border-bottom:1px solid #c9bfa8}h3{font:600 16px/1.3 "Source Serif 4",Georgia,serif;margin:12px 0 2px}h4{font-size:13px;color:#5C6670;margin:6px 0 0}ul{margin:4px 0;padding-left:20px}dt{font-weight:600;margin-top:8px}dd{margin:0}</style></head><body>' + body + '</body></html>');
     win.document.close();
   }
 
@@ -656,24 +854,22 @@
     $('#tiers').addEventListener('click', (e) => { const b = e.target.closest('button[data-tier]'); if (!b) return; S.tier = b.dataset.tier; renderTiers(); });
     $('#caseList').addEventListener('click', (e) => { const b = e.target.closest('[data-case]'); if (b) loadCase(b.dataset.case); });
     $('#cmap').addEventListener('change', (e) => { S.cmap = e.target.value; drawSeis(); });
+    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); });
     $('#gain').addEventListener('input', (e) => { S.gain = Number(e.target.value); $('#gainOut').textContent = S.gain.toFixed(1) + '×'; drawSeis(); });
     $('#showWells').addEventListener('change', (e) => { S.showWells = e.target.checked; drawSeis(); });
     $('#logType').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-log]'); if (!b || b.disabled) return;
       S.logType = b.dataset.log; (LOGS[S.logType].combo || [S.logType]).forEach((k) => S.viewed.add(k));
       document.querySelectorAll('#logType button').forEach((x) => x.setAttribute('aria-pressed', x === b));
-      drawLogs();
+      drawLogs(); drawStrings();
     });
     $('#activeTop').addEventListener('change', (e) => { S.activeTop = e.target.value; drawLogs(); });
     $('#flatten').addEventListener('change', (e) => {
       const t = e.target.value;
-      if (t && S.c.wells.some((w) => S.picks[t][w.name] == null)) {
-        $('#logReadout').textContent = 'Pick ' + t + ' in every well to flatten on it.';
-        e.target.value = S.flatten; return;
-      }
-      S.flatten = t; if (t) S.flattenUsed = true; drawLogs();
+      if (t && S.c.wells.some((w) => S.picks[t][w.name] == null)) { $('#logReadout').textContent = 'Pick ' + t + ' in every well to flatten on it.'; e.target.value = S.flatten; return; }
+      S.flatten = t; if (t) S.flattenUsed = true; drawLogs(); drawStrings();
     });
-    $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); updateSteps(); });
+    $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); drawStrings(); });
     const lc = $('#logs');
     lc.addEventListener('click', logClick);
     lc.addEventListener('mousemove', (e) => { S.hoverY = e.clientY - lc.getBoundingClientRect().top; drawLogs(); });
@@ -684,23 +880,33 @@
       const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
       if (x < 0 || x > S.width_m || v < 0 || v > g.vmax) { $('#seisReadout').textContent = ''; return; }
       if (S.section) { S.refX = x; drawSeis(); }
-      if (!S.seisLooked) { S.seisLooked = true; updateSteps(); }
       const time = S.domain === 'time' && S.section;
       $('#seisReadout').textContent = (x / 1000).toFixed(2) + ' km, ' + (time ? Math.round(v * 1000) + ' ms (≈ ' + Math.round(zAt(x, v)) + ' m)' : Math.round(v) + ' m' + (S.section ? ' (≈ ' + Math.round(tAt(x, v) * 1000) + ' ms)' : ''));
     });
-    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); });
-    $('#candidates').addEventListener('input', (e) => { const s = e.target.closest('input[data-cand]'); if (!s) return; S.raw[s.dataset.cand] = Number(s.value); S.weighed = true; updateShares(); updateSteps(); });
-    $('#evidence').addEventListener('change', (e) => { const cb = e.target.closest('input[data-ev]'); if (!cb) return; cb.checked ? S.relied.add(cb.dataset.ev) : S.relied.delete(cb.dataset.ev); });
-    $('#submit').addEventListener('click', submit);
-    $('#steps').addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-goto]'); if (!b) return;
-      const el = document.getElementById(b.dataset.goto); if (el && !el.hidden) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    $('#suspects').addEventListener('input', (e) => {
+      const s = e.target.closest('input[data-cand]'); if (!s) return;
+      S.raw[s.dataset.cand] = Number(s.value); updateShares(); drawTimeline();
     });
-    $('#howBtn').addEventListener('click', () => $('#howDlg').showModal());
+    $('#suspects').addEventListener('toggle', () => requestAnimationFrame(drawStrings), true);
+    $('#notes').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b && !e.target.closest('.term')) examine(b.dataset.note); });
+    $('#noteDetail').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-link]'); if (!b || S.submitted) return;
+      const id = S.selected, cand = b.dataset.cand;
+      S.links[id] = S.links[id] || {};
+      if (b.dataset.link) S.links[id][cand] = b.dataset.link; else delete S.links[id][cand];
+      renderNotes(); renderNoteDetail(); drawStrings();
+    });
+    $('#leads').addEventListener('click', (e) => {
+      const r = e.target.closest('button[data-lead]'), o = e.target.closest('button[data-open]');
+      if (r && !r.disabled) examine(r.dataset.lead);
+      if (o) examine(o.dataset.open);
+    });
+    $('#submit').addEventListener('click', submit);
     $('#biasToggle').addEventListener('change', (e) => { $('#bias').hidden = !e.target.checked; });
     $('#retry').addEventListener('click', () => { loadCase(S.c.id); window.scrollTo({ top: 0 }); });
     $('#next').addEventListener('click', nextCase);
     $('#popCase').addEventListener('click', popCase);
+    $('#howBtn').addEventListener('click', () => $('#howDlg').showModal());
     $('#caseFile').addEventListener('change', (e) => {
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader();
@@ -715,11 +921,13 @@
     });
     document.addEventListener('click', (e) => {
       const t = e.target.closest('.term'); const pop = $('#termPop');
-      if (t) { e.preventDefault(); showTerm(t); return; }
+      if (t) { e.preventDefault(); e.stopPropagation(); showTerm(t); return; }
       if (e.target.closest('.term-close') || (!pop.hidden && !e.target.closest('#termPop'))) pop.hidden = true;
-    });
+    }, true);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#termPop').hidden = true; });
-    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { drawSeis(); drawLogs(); }, 120); });
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { drawSeis(); drawLogs(); drawStrings(); }, 120); });
+    if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(drawStrings)).observe($('#board'));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawSeis(); drawLogs(); drawStrings(); });
   }
   function status(msg) { const s = $('#status'); s.textContent = msg; s.hidden = !msg; }
 

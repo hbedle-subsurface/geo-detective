@@ -25,8 +25,10 @@ Run `node tools/check_cases.js` (or `node tools/check_cases.js my-case.json`) to
 | `logWindow` | no | `{ "top_m", "base_m" }` depth range of the log display. |
 | `tops` | no | Surfaces the player can pick, with the expert picks. |
 | `candidates` | yes | Two or more interpretations. |
-| `expertConsensus` | yes | `{ candidateId: weight }`. Normalized if the weights do not sum to 1. |
-| `evidence` | no | Observations the player can mark as relied on; feeds the optional evidence check. |
+
+| `evidence` | yes | Sticky notes with panel likelihoods; see below. |
+| `leads` | no | Further data the player can request, with results and likelihoods. |
+| `maxLeads` | no | Number of leads that can be requested (default 2). |
 | `outcome` | no | What is known, with the confidence attached to it. |
 | `debrief` | no | Text shown after submitting. |
 | `glossary` | no | Extra terms: `{ "key": ["Title", "Definition"] }`. |
@@ -158,24 +160,48 @@ Display scales are fixed: gamma ray 0–150 API, caliper 6–16 in, resistivity 
 
 `depth` is a number (log depth, m), or `"model"` for synthetic cases, which finds the first sample of the unit named `layer` (default: the top name) in the well. `unc_m` is the uncertainty shown as a band after submitting. The uncertainty on an expert pick is meant to include the well's own depth uncertainty.
 
-## `candidates` and `expertConsensus`
+## `candidates` (suspects)
 
 ```json
 "candidates": [
-  { "id": "normal", "label": "Normal fault", "description": "...", "pros": ["..."], "cons": ["..."] }
-],
-"expertConsensus": { "normal": 0.78, "strikeslip": 0.14, "erosion": 0.08 }
+  { "id": "normal", "label": "Normal fault", "sketch": "normal-fault", "description": "...", "pros": ["..."], "cons": ["..."] }
+]
 ```
 
-Every case has at least two candidates, including at the easy tier. Weights in `expertConsensus` are the panel distribution the player is compared against; for a new case they are best collected from several interpreters independently and averaged, and the number of interpreters recorded in `debrief`.
+Every case has at least two candidates, including at the easy tier. They appear on the board as suspects with a small line sketch. `sketch` is one of `normal-fault`, `reverse-fault`, `growth-fault`, `wedge`, `strike-slip`, `erosion`, `withdrawal`, `fold`, `drape`, `diapir`, `valley`, `channel-stack`, `collapse`, `two-sands`; any other value shows a question mark. `description`, `pros` and `cons` fill the suspect's dossier.
 
-## `evidence`
+## `evidence` (sticky notes)
 
 ```json
-{ "id": "missing", "label": "Sand C absent in W2", "panelWeight": 3 }
+{
+  "id": "missing",
+  "label": "Sand C absent in W2",
+  "detail": "Optional extra text shown when the note is examined.",
+  "likelihood": { "normal": 0.8, "strikeslip": 0.25, "erosion": 0.6 },
+  "where": { "well": "W2", "top_m": 1180, "base_m": 1320 }
+}
 ```
 
-`panelWeight` runs 0 (not diagnostic, or misleading) to 3 (strongly diagnostic). The optional evidence check lists weight-3 items the player did not select and weight-0/1 items they did.
+- `label` is the observation written on the note.
+- `likelihood` gives, for each candidate, how probable this observation would be if that candidate were correct, on a 0–1 scale. Only the ratios between candidates matter: equal values (0.5, 0.5, 0.5) mean the note is consistent with every suspect and does not narrow the field. A missing value counts as 0.5.
+- `where` circles the observation on an exhibit, and a red string runs from the note to the circle. `{ "x_m", "z_m", "rx_m", "rz_m" }` circles a region of the seismic line (centre and half-widths in metres, drawn correctly in both depth and time displays). `{ "well", "top_m", "base_m" }` circles a log interval. Omit `where` for observations that are not a place on the data.
+
+The panel distribution is computed from the likelihoods by Bayes' rule, starting from equal weights. After a case is closed, the player is compared with the panel's distribution after the same notes and leads the player examined, and with the panel's distribution after all evidence notes. Run `node tools/check_cases.js` to print the panel distribution after all evidence and the effect of each lead, and adjust the likelihoods until those match the distribution the interpreters behind the case would give.
+
+Cases written before likelihoods were added can still supply `expertConsensus` (`{ candidateId: weight }`) and no likelihoods; the board then compares against that fixed distribution and the timeline shows no panel line.
+
+## `leads` (further data requests)
+
+```json
+"maxLeads": 2,
+"leads": [
+  { "id": "core", "label": "Oriented core across the fault in W2",
+    "result": "Polished fault surfaces with slickenlines plunging steeply, close to the dip direction of the fault.",
+    "likelihood": { "normal": 0.85, "strikeslip": 0.15, "erosion": 0.1 } }
+]
+```
+
+Leads are listed on the chalkboard. The player can request up to `maxLeads` of them (default 2); each request adds a pink note with the `result`. Leads use the same `likelihood` and optional `where` fields as evidence. The case report lists every lead with how much it narrows the panel's spread of confidence, including leads that were not requested, so different kinds of additional data can be compared. A lead with equal likelihoods (for example pressure data that cannot separate the suspects) narrows nothing.
 
 ## `outcome`
 
@@ -185,9 +211,12 @@ Every case has at least two candidates, including at the easy tier. Weights in `
 
 `confidence` is below 1 even when the answer is known by construction or from a well, and `basis` states what limits it.
 
-## Scoring shown in the debrief
+## Scoring shown in the case report
 
-- **Overlap with panel**: Σ min(player, panel) across candidates. 100% for identical distributions.
-- **Effective number of interpretations**: 1 / Σ weight². 1 when all weight is on one interpretation.
-- **Largest weight**: the player's and the panel's most heavily weighted interpretation.
+- **Overlap with panel**: Σ min(player, panel) across candidates, using the panel distribution after the notes the player examined. 100% for identical distributions.
+- **Spread of confidence**: normalized entropy, −Σ p ln p / ln n. 100% when weight is shared equally, 0% when all weight is on one candidate.
+- **Uncertainty timeline**: the player's spread before each note was examined and at closing, beside the panel's spread after the same sequence of notes.
+- **Narrowing**: for each note and lead, the drop in the panel's spread from that item alone, starting from equal weights.
+- **Largest weight**: the player's and the panel's most heavily weighted candidate.
 - **Tops**: difference between player and panel picks, flagged when within the panel's stated uncertainty.
+- **Evidence check** (optional): diagnostic notes not examined, strings the panel reads in the opposite direction, strung notes that are consistent with every suspect, the lead that narrows the field most, log types never displayed, and suspects weighted 20 points above or below the panel.
