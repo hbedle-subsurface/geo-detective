@@ -22,6 +22,17 @@
     DT: { label: 'Sonic', unit: 'us/ft', min: 190, max: 40, term: 'sonic' },
     DN: { label: 'Density–neutron', combo: ['RHOB', 'NPHI'] }
   };
+  const LINES = [
+    { id: 'seismic', label: 'Seismic', color: '#F7E27A' },
+    { id: 'logs', label: 'Well logs', color: '#BFDDF2' },
+    { id: 'attributes', label: 'Attributes', color: '#C9E7B8' },
+    { id: 'ml', label: 'Machine learning', color: '#D9CBF2' },
+    { id: 'lead', label: 'Leads', color: '#F4B6C2' }
+  ];
+  const lineOf = (e) => (e.kind === 'lead' ? 'lead' : e.line || (e.where && e.where.well ? 'logs' : 'seismic'));
+  const lineInfo = (id) => LINES.find((l) => l.id === id) || LINES[0];
+  const SEQ = [[13, 8, 35], [84, 15, 110], [165, 44, 96], [230, 92, 48], [252, 180, 50], [252, 253, 191]];
+  const CLASS_COLORS = [[31, 119, 180], [255, 127, 14], [44, 160, 44], [214, 39, 40], [148, 103, 189], [140, 86, 75], [227, 119, 194], [127, 127, 127]];
   const TOP_COLORS = ['#841617', '#2F6690', '#4F7A28', '#A86A12', '#6D4C8D', '#1F7A7A'];
   const CAND_COLORS = ['#9E1B22', '#2F6690', '#A86A12', '#4F7A28', '#6D4C8D'];
 
@@ -94,14 +105,17 @@
   function termsIn(s) { const out = []; String(s || '').replace(/\[\[([^\]|]+)/g, (m, k) => out.push(k)); return out; }
   function showTerm(btn) {
     const g = gloss(btn.dataset.term); if (!g) return;
-    const pop = $('#termPop');
+    const pop = $('#termPop'), host = btn.closest('dialog') || document.body;
+    if (pop.parentElement !== host) host.appendChild(pop);
     pop.innerHTML = '<div class="term-title">' + esc(g[0]) + '</div><p>' + esc(g[1]) + '</p><button type="button" class="term-close" aria-label="Close">×</button>';
     pop.hidden = false;
-    const r = btn.getBoundingClientRect();
-    const w = Math.min(340, window.innerWidth - 24);
+    const r = btn.getBoundingClientRect(), inDlg = host !== document.body;
+    const hr = inDlg ? host.getBoundingClientRect() : { left: -window.scrollX, top: -window.scrollY, width: window.innerWidth };
+    const w = Math.min(340, (inDlg ? hr.width : window.innerWidth) - 24);
     pop.style.width = w + 'px';
-    pop.style.left = clamp(r.left + window.scrollX, 12, window.scrollX + window.innerWidth - w - 12) + 'px';
-    pop.style.top = r.bottom + window.scrollY + 6 + 'px';
+    const left = r.left - hr.left + (inDlg ? host.scrollLeft : 0);
+    pop.style.left = clamp(left, 12, (inDlg ? hr.width : window.scrollX + window.innerWidth) - w - 12) + 'px';
+    pop.style.top = r.bottom - hr.top + (inDlg ? host.scrollTop : 0) + 6 + 'px';
     pop.querySelector('.term-close').focus();
   }
 
@@ -121,10 +135,14 @@
   }
 
   /* ---------- evidence model ---------- */
+  function orderedEvidence() {
+    const ev = (S.c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e));
+    return LINES.flatMap((l) => ev.filter((e) => lineOf(e) === l.id));
+  }
   function allItems() { const c = S.c; return [...(c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(c.leads || []).map((e) => Object.assign({ kind: 'lead' }, e))]; }
   function itemById(id) { return allItems().find((e) => e.id === id); }
   function noteNo(id) {
-    const c = S.c, ei = (c.evidence || []).findIndex((e) => e.id === id);
+    const c = S.c, ei = orderedEvidence().findIndex((e) => e.id === id);
     if (ei >= 0) return 'E' + (ei + 1);
     return 'L' + ((c.leads || []).findIndex((e) => e.id === id) + 1);
   }
@@ -139,10 +157,13 @@
     cands.forEach((k) => (p[k.id] /= s));
     return p;
   }
+  // 1 when weight is shared equally, 0 when all weight is on one suspect:
+  // one minus the total variation distance from equal weights, normalized by its maximum.
   function spread(dist) {
     const v = Object.values(dist), n = v.length;
     if (n < 2) return 0;
-    return -v.reduce((a, p) => a + (p > 0 ? p * Math.log(p) : 0), 0) / Math.log(n);
+    const tv = 0.5 * v.reduce((a, p) => a + Math.abs(p - 1 / n), 0);
+    return 1 - tv / (1 - 1 / n);
   }
   function diagnosticRatio(e) {
     if (!e.likelihood) return 1;
@@ -159,9 +180,9 @@
     Object.assign(S, {
       expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      links: {}, examined: [], snaps: [], selected: null, anchors: {},
+      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null,
       picks: {}, submitted: false, flatten: '', logType: 'GR',
-      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
+      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', attr: 'amplitude', attrsSeen: new Set(['amplitude']), showPanel: false, gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
     (c.tops || []).forEach((t) => (S.picks[t.name] = {}));
     S.activeTop = c.tops && c.tops.length ? c.tops[0].name : null;
@@ -225,7 +246,14 @@
       $('#wellNotes').innerHTML = c.wells.map((w) =>
         '<li><strong>' + esc(w.name) + '</strong> ±' + (w.depthUncertainty_m || 0) + ' m. ' + rich(w.note || '') + '</li>').join('');
     }
+    const synth = c.seismic.type === 'synthetic';
+    $('#attrWrap').hidden = !synth;
+    $('#attr').innerHTML = Object.entries(GW.ATTRIBUTES).map(([k, a]) => '<option value="' + k + '">' + a.label + '</option>').join('');
+    $('#attr').value = S.attr;
+    $('#showPanel').checked = S.showPanel;
+    renderLegend();
     renderSuspects();
+    renderRail();
     renderNotes();
     renderNoteDetail();
     renderLeads();
@@ -267,22 +295,60 @@
 
   /* ---------- evidence notes ---------- */
   function renderNotes() {
-    const items = [...(S.c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(S.c.leads || []).filter((l) => S.examined.includes(l.id)).map((e) => Object.assign({ kind: 'lead' }, e))];
-    $('#notes').innerHTML = items.map((e, i) => {
+    const leads = (S.c.leads || []).filter((l) => S.examined.includes(l.id)).map((e) => Object.assign({ kind: 'lead' }, e));
+    const items = [...orderedEvidence(), ...leads];
+    let html = '', lastLine = null, i = 0;
+    items.forEach((e) => {
+      const ln = lineOf(e);
+      if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
       const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
       const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
-      return '<button type="button" class="note ' + e.kind + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i * 37) % 7) - 3) * 0.6 + 'deg">' +
+      html += '<button type="button" class="note' + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i++ * 37) % 7) - 3) * 0.6 + 'deg;--line:' + lineInfo(ln).color + '">' +
         '<span class="pin"></span><span class="note-no">' + noteNo(e.id) + (seen ? '' : ' · unexamined') + '</span>' +
         '<span class="note-text">' + (seen ? rich(e.label) : esc(e.label)) + '</span>' +
         (tags ? '<span class="tags">' + tags + '</span>' : '') + '</button>';
-    }).join('');
+    });
+    if (lastLine) html += '</div>';
+    $('#notes').innerHTML = html;
   }
+
+  /* ---------- lines of evidence rail and walk-through ---------- */
+  function walkOrder() { return orderedEvidence().map((e) => e.id); }
+  function renderRail() {
+    const ev = orderedEvidence(), leads = S.c.leads || [];
+    const groups = LINES.map((l) => ({ l, items: l.id === 'lead' ? leads.map((x) => Object.assign({ kind: 'lead' }, x)) : ev.filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
+    const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
+    $('#railLines').innerHTML = groups.map((g) =>
+      '<div class="rail-line" style="--line:' + g.l.color + '"><span class="rail-label">' + g.l.label + '</span><span class="rail-dots">' +
+      g.items.map((e) => '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + '" data-rail="' + esc(e.id) + '"' + (e.kind === 'lead' && !S.examined.includes(e.id) ? ' disabled' : '') + ' title="' + esc(noteNo(e.id) + ' ' + e.label) + '">' + noteNo(e.id) + '</button>').join('') +
+      '</span></div>').join('');
+    const next = order.find((id, k) => k > pos && !S.examined.includes(id)) || order[pos + 1];
+    $('#clueNext').disabled = !next;
+    $('#cluePrev').disabled = pos <= 0;
+    $('#clueCount').textContent = S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+  }
+  function stepClue(dir) {
+    const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
+    let id;
+    if (dir > 0) id = order.find((x, k) => k > pos && !S.examined.includes(x)) || order[pos + 1];
+    else id = order[Math.max(0, pos - 1)];
+    if (id) { examine(id); focusClue(id); }
+  }
+  function focusClue(id) {
+    const e = itemById(id); if (!e) return;
+    const target = e.where ? (e.where.well ? $('#logPanel') : $('#seisPanel')) : $('#noteDetail');
+    if (target && !target.hidden) target.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' });
+  }
+
   function renderNoteDetail() {
     const box = $('#noteDetail'), e = S.selected && itemById(S.selected);
     if (!e) { box.innerHTML = '<p class="howto">Select a note to examine it. Notes that point at the data are circled on the exhibits.</p>'; return; }
     const links = S.links[e.id] || {};
-    const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A.') : '';
-    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + (e.kind === 'lead' ? ' · lead' : '') + '</span><span class="where">' + where + '</span></div>' +
+    const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A' + (e.where.attribute ? ', ' + GW.ATTRIBUTES[e.where.attribute].label.toLowerCase() + ' display.' : '.')) : '';
+    const ln = lineInfo(lineOf(e));
+    box.style.setProperty('--line', ln.color);
+    const model = lineOf(e) === 'ml' && (e.model || e.reportedConfidence != null) ? '<p class="model-card">' + (e.model ? '<span>' + rich(e.model) + '</span>' : '') + (e.reportedConfidence != null ? '<span>Confidence reported by the model: <b>' + pct(e.reportedConfidence) + '</b></span>' : '') + '</p>' : '';
+    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + model +
       (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
       '<p class="howto">String this note to the suspects it bears on:</p>' +
       '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
@@ -297,8 +363,28 @@
       S.examined.push(id);
     }
     S.selected = id;
-    renderNotes(); renderNoteDetail(); renderLeads();
+    const it = itemById(id);
+    if (it && it.where && it.where.attribute && S.section) setAttr(it.where.attribute);
+    else if (it && it.where && it.where.x_m != null && S.attr !== 'amplitude' && !(it.where.attribute)) setAttr('amplitude');
+    renderNotes(); renderNoteDetail(); renderLeads(); renderRail();
     drawSeis(); drawLogs(); drawTimeline(); drawStrings();
+  }
+
+  function setAttr(k) {
+    S.attr = k; S.attrsSeen.add(k); $('#attr').value = k; S._imgKey = null;
+    $('#building').hidden = false; $('#building').textContent = 'Computing ' + GW.ATTRIBUTES[k].label.toLowerCase() + '…';
+    setTimeout(() => { GW.attribute(S.section, k); $('#building').hidden = true; renderLegend(); drawSeis(); drawStrings(); }, 20);
+  }
+  function renderLegend() {
+    const a = GW.ATTRIBUTES[S.attr] || GW.ATTRIBUTES.amplitude, el = $('#attrLegend');
+    if (a.kind === 'diverging') { el.innerHTML = '<span>Amplitude</span><span class="bar" style="background:' + (S.cmap === 'gray' ? 'linear-gradient(90deg,#fff,#000)' : 'linear-gradient(90deg,#9e1b1b,#fff,#14327a)') + '"></span><span>− / +</span>'; return; }
+    if (a.kind === 'classes') {
+      const inputs = S.section && S.section.attr && S.section.attr.som ? S.section.attr.som.inputs.join(', ') : '';
+      el.innerHTML = '<span>' + rich('[[som|SOM]] class') + '</span>' + CLASS_COLORS.map((c, i) => '<span class="sw" style="background:rgb(' + c + ')">' + (i + 1) + '</span>').join('') + '<span class="leg-note">Unordered groups; inputs: ' + esc(inputs) + '</span>';
+      return;
+    }
+    const grad = a.kind === 'coherence' ? 'linear-gradient(90deg,#000,#fff)' : 'linear-gradient(90deg,' + SEQ.map((c) => 'rgb(' + c + ')').join(',') + ')';
+    el.innerHTML = '<span>' + rich('[[' + a.term + '|' + a.label + ']]') + '</span><span>' + a.min + '</span><span class="bar" style="background:' + grad + '"></span><span>' + a.max + (a.unit ? ' ' + a.unit : '') + '</span>';
   }
 
   /* ---------- leads ---------- */
@@ -319,7 +405,7 @@
   /* ---------- timeline ---------- */
   function drawTimeline(target) {
     const svg = target || $('#timeline'); if (!svg || !S.c) return;
-    const W = target ? 640 : 260, H = target ? 220 : 150, m = { l: 34, r: 10, t: 12, b: 30 };
+    const W = target ? 640 : 260, H = target ? 230 : 160, m = { l: 34, r: 12, t: 12, b: 36 };
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     const n = S.examined.length;
     const player = S.snaps.slice(0, n).map(spread);
@@ -330,9 +416,13 @@
     const Y = (v) => m.t + (1 - v) * (H - m.t - m.b);
     let g = '';
     [0, 0.5, 1].forEach((v) => { g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" class="tl-grid"/><text x="' + (m.l - 5) + '" y="' + (Y(v) + 4) + '" class="tl-ax" text-anchor="end">' + v * 100 + '</text>'; });
-    for (let j = 0; j <= n; j++) g += '<text x="' + X(j) + '" y="' + (H - m.b + 16) + '" class="tl-ax" text-anchor="middle">' + (j ? noteNo(S.examined[j - 1]) : 'Start') + '</text>';
+    const gapPx = n ? (W - m.l - m.r) / n : 40, every = Math.max(1, Math.ceil(26 / gapPx));
+    for (let j = 0; j <= n; j++) {
+      if (j) { const ln = lineInfo(lineOf(itemById(S.examined[j - 1]) || {})), rw = Math.min(22, gapPx - 2); g += '<rect x="' + (X(j) - rw / 2) + '" y="' + (H - m.b + 5) + '" width="' + rw + '" height="14" rx="2" fill="' + ln.color + '"/>'; }
+      if (j === 0 || j % every === 0 || j === n) g += '<text x="' + X(j) + '" y="' + (H - m.b + (j ? 16 : 28)) + '" class="tl-ax" text-anchor="' + (j ? 'middle' : 'start') + '">' + (j ? noteNo(S.examined[j - 1]) : 'Start') + '</text>';
+    }
     const path = (arr) => arr.map((v, j) => (j ? 'L' : 'M') + X(j).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
-    if (S.submitted || target) g += '<path d="' + path(panel) + '" class="tl-panel"/>' + panel.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="3" class="tl-panel-dot"/>').join('');
+    if (S.submitted || target || S.showPanel) g += '<path d="' + path(panel) + '" class="tl-panel"/>' + panel.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="3" class="tl-panel-dot"/>').join('');
     g += '<path d="' + path(player) + '" class="tl-you"/>' + player.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="' + (j === n && !S.submitted ? 4.5 : 3.5) + '" class="tl-you-dot' + (j === n && !S.submitted ? ' live' : '') + '"/>').join('');
     svg.innerHTML = g;
   }
@@ -414,14 +504,22 @@
     return v >= 0 ? [255 * u + 20 * t, 255 * u + 60 * t, 255 * u + 150 * t] : [255 * u + 150 * t, 255 * u + 25 * t, 255 * u + 25 * t];
   }
   function sectionImage() {
-    const s = S.section, time = S.domain === 'time', key = S.cmap + S.gain + S.domain;
+    const s = S.section, time = S.domain === 'time', key = S.cmap + S.gain + S.domain + S.attr;
     if (S._imgKey === key) return S._off;
-    const nz = time ? s.nt : s.nz, arr = time ? s.timeData : s.data;
+    const nz = time ? s.nt : s.nz, A = GW.ATTRIBUTES[S.attr] || GW.ATTRIBUTES.amplitude;
+    const arr = GW.attribute(s, S.attr)[time ? 'time' : 'depth'];
     const off = document.createElement('canvas'); off.width = s.nx; off.height = nz;
     const ctx = off.getContext('2d'), id = ctx.createImageData(s.nx, nz);
+    const seq = (f) => { f = clamp(f, 0, 1) * (SEQ.length - 1); const i = Math.min(SEQ.length - 2, Math.floor(f)), u = f - i; return [0, 1, 2].map((q) => SEQ[i][q] * (1 - u) + SEQ[i + 1][q] * u); };
     for (let i = 0; i < s.nx; i++) for (let j = 0; j < nz; j++) {
-      const [r, g, b] = colorFor(arr[i * nz + j] * S.gain, S.cmap), q = (j * s.nx + i) * 4;
-      id.data[q] = r; id.data[q + 1] = g; id.data[q + 2] = b; id.data[q + 3] = 255;
+      const v = arr[i * nz + j];
+      let rgb;
+      if (A.kind === 'diverging') rgb = colorFor(v * S.gain, S.cmap);
+      else if (A.kind === 'classes') rgb = CLASS_COLORS[v % CLASS_COLORS.length];
+      else if (A.kind === 'coherence') { const g = 255 * clamp((v - A.min) / (A.max - A.min), 0, 1); rgb = [g, g, g]; }
+      else rgb = seq((v - A.min) / (A.max - A.min));
+      const q = (j * s.nx + i) * 4;
+      id.data[q] = rgb[0]; id.data[q + 1] = rgb[1]; id.data[q + 2] = rgb[2]; id.data[q + 3] = 255;
     }
     ctx.putImageData(id, 0, 0);
     S._off = off; S._imgKey = key;
@@ -446,7 +544,7 @@
   }
 
   function drawSeis() {
-    if (!S.c) return;
+    if (!S.c || (!S.section && !S.img)) return;
     const cv = $('#seis'), W = cv.parentElement.clientWidth;
     const H = clamp(Math.round(W * (S.depth_m / S.width_m) * 0.85), 320, 640);
     const ctx = setupCanvas(cv, W, H);
@@ -530,8 +628,10 @@
 
     // circles for examined evidence that points at the section
     S.anchors = S.anchors || {};
+    Object.keys(S.anchors).forEach((k) => { if (S.anchors[k].el === 'seis') delete S.anchors[k]; });
     examinedItems().forEach((e) => {
       const w = e.where; if (!w || w.well || w.x_m == null) return;
+      if ((w.attribute || 'amplitude') !== S.attr && e.id !== S.selected) return;
       const cx = X(w.x_m), zc = w.z_m, rz = w.rz_m || 150;
       const y1 = Yz(w.x_m, zc - rz), y2 = Yz(w.x_m, zc + rz), cy = (y1 + y2) / 2, ry = Math.max(10, (y2 - y1) / 2);
       const rx = Math.max(12, ((w.rx_m || 300) / S.width_m) * pw);
@@ -566,7 +666,7 @@
     return L.log ? (Math.log10(v) - Math.log10(L.min)) / (Math.log10(L.max) - Math.log10(L.min)) : (v - L.min) / (L.max - L.min);
   }
   function drawLogs() {
-    const c = S.c; if (!c || !c.wells || !c.wells.length) return;
+    const c = S.c; if (!c || !c.wells || !c.wells.length || !S.logs || !S.expertTops) return;
     const cv = $('#logs'), W = cv.parentElement.clientWidth;
     const H = clamp(S.seisGeom ? S.seisGeom.H + 40 : 520, 440, 700);
     const ctx = setupCanvas(cv, W, H);
@@ -756,6 +856,7 @@
 
     $('#debriefBody').innerHTML =
       '<p class="stamp">Case ' + caseNumber(c) + ' · ' + esc(c.title) + '</p>' +
+      '<p class="standing">Suspects still standing at 10% or more: <b>' + c.candidates.filter((k) => P[k.id] >= 0.1).length + ' of ' + c.candidates.length + '</b> in your case, <b>' + c.candidates.filter((k) => E[k.id] >= 0.1).length + '</b> for the panel.</p>' +
       '<h4>Confidence</h4>' +
       (bayes ? '<p class="howto">Panel: the panel\u2019s distribution after the same ' + S.examined.length + ' note' + (S.examined.length === 1 ? '' : 's') + ' examined here. Panel, all evidence: after every evidence note, without leads.</p>' : '') +
       '<div class="cmp">' + rows + '</div>' +
@@ -765,6 +866,7 @@
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
       (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
+      byLine() + mlTable() +
       narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
@@ -779,6 +881,22 @@
     S.session = S.session.filter((r) => r.id !== c.id);
     S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.examined.length, you: spread(P), panel: spread(E) });
     renderSession();
+  }
+
+  function byLine() {
+    if (!usesLikelihood()) return '';
+    const groups = LINES.map((l) => ({ l, items: allItems().filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
+    const row = (label, color, ids, note) => { const drop = Math.max(0, 1 - spread(posterior(ids))); return '<div class="line-row"><span class="line-name"><i style="background:' + color + '"></i>' + label + '</span><span class="track"><span class="fill" style="width:' + drop * 100 + '%;background:#9E1B22"></span></span><span class="val">' + Math.round(drop * 100) + '</span><span class="subnote">' + note + '</span></div>'; };
+    const rows = groups.map((g) => g.l.id === 'lead'
+      ? g.items.map((e) => row('Lead ' + noteNo(e.id) + ': ' + esc(e.label), g.l.color, [e.id], S.examined.includes(e.id) ? 'requested' : 'not requested')).join('')
+      : row(g.l.label, g.l.color, g.items.map((e) => e.id), g.items.length + ' clue' + (g.items.length === 1 ? '' : 's') + ', ' + g.items.filter((e) => S.examined.includes(e.id)).length + ' examined')).join('');
+    return '<h4>Narrowing by line of evidence</h4><p class="howto">Drop in the panel\u2019s spread of confidence, in percentage points, from each line of evidence on its own, starting from equal weights.</p><div class="lines-chart">' + rows + '</div>';
+  }
+  function mlTable() {
+    const ml = allItems().filter((e) => lineOf(e) === 'ml');
+    if (!ml.length || !usesLikelihood()) return '';
+    return '<h4>Machine learning results</h4><p class="howto">Confidence reported by each model beside how much its result narrows the panel\u2019s field. A model reports confidence in its own output, within what it was trained on; the narrowing depends on how well that output separates the suspects in this geologic setting.</p><div class="table-wrap"><table><thead><tr><th></th><th>Result</th><th>Reported by the model</th><th>Narrowing</th></tr></thead><tbody>' +
+      ml.map((e) => { const drop = Math.max(0, 1 - spread(posterior([e.id]))); return '<tr><td>' + noteNo(e.id) + '</td><td>' + esc(e.label) + (e.model ? '<div class="subnote">' + esc(e.model.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, k, l) => l || k)) + '</div>' : '') + '</td><td>' + (e.reportedConfidence != null ? pct(e.reportedConfidence) : 'none (unsupervised)') + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop * 400) + '%"></span></span> ' + Math.round(drop * 100) + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
 
   function biasCheck(E) {
@@ -807,6 +925,7 @@
     }
     if (c.wells && c.wells.length) {
       const never = [...S.availLogs].filter((k) => !LOGS[k].combo && !S.viewed.has(k));
+      items.push('<li><strong>Seismic displays never shown:</strong> ' + (Object.keys(GW.ATTRIBUTES).filter((k) => !S.attrsSeen.has(k)).map((k) => GW.ATTRIBUTES[k].label).join(', ') || 'none') + '</li>');
       items.push('<li><strong>Log types never displayed:</strong> ' + (never.length ? never.map((k) => LOGS[k].label).join(', ') : 'none') + '</li>');
       let need = 0, made = 0;
       (c.tops || []).forEach((t) => c.wells.forEach((w) => { const e = S.expertTops[t.name][w.name]; if (e && !e.absent) { need++; if (S.picks[t.name][w.name] != null) made++; } }));
@@ -853,7 +972,13 @@
   function wire() {
     $('#tiers').addEventListener('click', (e) => { const b = e.target.closest('button[data-tier]'); if (!b) return; S.tier = b.dataset.tier; renderTiers(); });
     $('#caseList').addEventListener('click', (e) => { const b = e.target.closest('[data-case]'); if (b) loadCase(b.dataset.case); });
-    $('#cmap').addEventListener('change', (e) => { S.cmap = e.target.value; drawSeis(); });
+    $('#cmap').addEventListener('change', (e) => { S.cmap = e.target.value; renderLegend(); drawSeis(); });
+    $('#attr').addEventListener('change', (e) => setAttr(e.target.value));
+    $('#showPanel').addEventListener('change', (e) => { S.showPanel = e.target.checked; drawTimeline(); });
+    $('#cluePrev').addEventListener('click', () => stepClue(-1));
+    $('#clueNext').addEventListener('click', () => stepClue(1));
+    $('#railLines').addEventListener('click', (e) => { const b = e.target.closest('button[data-rail]'); if (b && !b.disabled) { examine(b.dataset.rail); focusClue(b.dataset.rail); } });
+    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
     $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); });
     $('#gain').addEventListener('input', (e) => { S.gain = Number(e.target.value); $('#gainOut').textContent = S.gain.toFixed(1) + '×'; drawSeis(); });
     $('#showWells').addEventListener('change', (e) => { S.showWells = e.target.checked; drawSeis(); });
@@ -906,7 +1031,22 @@
     $('#retry').addEventListener('click', () => { loadCase(S.c.id); window.scrollTo({ top: 0 }); });
     $('#next').addEventListener('click', nextCase);
     $('#popCase').addEventListener('click', popCase);
-    $('#howBtn').addEventListener('click', () => $('#howDlg').showModal());
+    const dlg = $('#howDlg');
+    dlg.querySelectorAll('.brief-page p, .brief-page li').forEach((el) => (el.innerHTML = el.innerHTML.replace(/\[\[[^\]]+\]\]/g, (m) => rich(m.replace(/&amp;/g, '&')))));
+    const showPage = (k) => {
+      S.briefPage = k;
+      dlg.querySelectorAll('.brief-page').forEach((p) => (p.hidden = Number(p.dataset.page) !== k));
+      dlg.querySelectorAll('.brief-tabs button').forEach((b) => b.setAttribute('aria-selected', Number(b.dataset.page) === k));
+      dlg.querySelectorAll('.brief-dots i').forEach((d, i) => d.classList.toggle('on', i === k));
+      $('#briefBack').style.visibility = k ? 'visible' : 'hidden';
+      $('#briefNext').textContent = k < 2 ? 'Next' : (S.c && !S.everOpened ? 'Open the case' : 'Back to the board');
+    };
+    GW._showBrief = (k) => { showPage(k); if (!dlg.open) dlg.showModal(); };
+    dlg.querySelector('.brief-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-page]'); if (b) showPage(Number(b.dataset.page)); });
+    $('#briefBack').addEventListener('click', () => showPage(Math.max(0, S.briefPage - 1)));
+    $('#briefNext').addEventListener('click', () => { if (S.briefPage < 2) showPage(S.briefPage + 1); else { S.everOpened = true; dlg.close(); } });
+    $('#howBtn').addEventListener('click', () => GW._showBrief(2));
+    $('#briefBtn').addEventListener('click', () => GW._showBrief(0));
     $('#caseFile').addEventListener('change', (e) => {
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader();
@@ -948,6 +1088,6 @@
     if (startId) loadCase(startId);
     let seen = false;
     try { seen = localStorage.getItem('geoDetectiveHowSeen') === '1'; localStorage.setItem('geoDetectiveHowSeen', '1'); } catch (e) { /* storage unavailable */ }
-    if (!seen && $('#howDlg').showModal) $('#howDlg').showModal();
+    if (!seen && $('#howDlg').showModal) GW._showBrief(0);
   };
 })();

@@ -248,7 +248,8 @@ GW.registerCase({
         "z_m": 1300,
         "rx_m": 500,
         "rz_m": 480
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "hwthick",
@@ -263,7 +264,8 @@ GW.registerCase({
         "z_m": 1300,
         "rx_m": 700,
         "rz_m": 450
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "isochore",
@@ -277,7 +279,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 500,
         "base_m": 1700
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "fwthick",
@@ -292,7 +295,8 @@ GW.registerCase({
         "z_m": 1100,
         "rx_m": 800,
         "rz_m": 400
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "lowrhob",
@@ -306,7 +310,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1075,
         "base_m": 1155
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "sonicspikes",
@@ -320,7 +325,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1075,
         "base_m": 1155
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "highgr",
@@ -334,7 +340,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 500,
         "base_m": 1850
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "deep",
@@ -343,6 +350,72 @@ GW.registerCase({
         "growth": 0.5,
         "wedge": 0.5,
         "withdrawal": 0.6
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "cohfade",
+      "line": "attributes",
+      "label": "Coherence: the fault is a clear low-coherence break below about 900 m and fades out upward",
+      "likelihood": {
+        "growth": 0.75,
+        "wedge": 0.45,
+        "withdrawal": 0.55
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2150,
+        "z_m": 900,
+        "rx_m": 380,
+        "rz_m": 480
+      }
+    },
+    {
+      "id": "spectune",
+      "line": "attributes",
+      "label": "Spectral decomposition: Sand 4 is brighter at 15 Hz east of the fault and brighter at 45 Hz west of it",
+      "detail": "East of the fault Sand 4 is about 250 m deeper.",
+      "likelihood": {
+        "growth": 0.5,
+        "wedge": 0.5,
+        "withdrawal": 0.5
+      },
+      "where": {
+        "attribute": "spec_low",
+        "x_m": 2000,
+        "z_m": 1550,
+        "rx_m": 1600,
+        "rz_m": 200
+      }
+    },
+    {
+      "id": "somclass",
+      "line": "ml",
+      "label": "SOM: the Lime Stringer and Sand 4 each keep their own class on both sides of the fault",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growth": 0.55,
+        "wedge": 0.55,
+        "withdrawal": 0.55
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 1250,
+        "rx_m": 1700,
+        "rz_m": 450
+      }
+    },
+    {
+      "id": "thicknet",
+      "line": "ml",
+      "label": "A thickness-prediction model predicts the Sand 1 to Sand 4 interval thickening steadily from W1 to W2",
+      "model": "Regression from seismic attributes to interval thickness, trained on W1 and W2 only",
+      "reportedConfidence": 0.99,
+      "likelihood": {
+        "growth": 0.45,
+        "wedge": 0.6,
+        "withdrawal": 0.5
       }
     }
   ],
@@ -351,7 +424,7 @@ GW.registerCase({
     "confidence": 0.82,
     "basis": "Both processes are present in the model. On real data, deeper imaging and a well nearer the fault would be needed to separate the fault-driven thickening from regional thickening and to rule out a mobile shale."
   },
-  "debrief": "The low bulk density and sonic spikes in W2 sit inside a shale on the gamma ray log, over the interval where the caliper shows an enlarged hole, so they are borehole effects rather than a sand. The high gamma ray in W1 is a calibration offset: the log shape correlates even though the values do not match W2.",
+  "debrief": "The low bulk density and sonic spikes in W2 sit inside a shale on the gamma ray log, over the interval where the caliper shows an enlarged hole, so they are borehole effects rather than a sand. The high gamma ray in W1 is a calibration offset: the log shape correlates even though the values do not match W2. The 15 Hz and 45 Hz brightness of Sand 4 changes across the fault because the eastern side is deeper and has lost more high frequency, not because Sand 4 changes thickness. The thickness model fits its two training wells almost perfectly, so its 99% reflects the fit at two points; between them it can only draw a smooth trend and has no way to place a fault-controlled change.",
   "leads": [
     {
       "id": "nearwell",

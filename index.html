@@ -15,9 +15,10 @@
   <header class="masthead">
     <div class="brand">
       <h1>Geo-Detective</h1>
-      <p>Subsurface cases built from seismic and well evidence. The answer is rarely certain; the uncertainty can be narrowed.</p>
+      <p>Reconstructing subsurface events no one witnessed, from the evidence they left behind.</p>
     </div>
     <div class="mast-actions">
+      <button type="button" id="briefBtn" class="btn ghost">Detective profile</button>
       <button type="button" id="howBtn" class="btn ghost">How to play</button>
       <label class="btn ghost file">Open a case file (.json)
         <input type="file" id="caseFile" accept=".json,application/json" hidden>
@@ -33,6 +34,15 @@
   <p id="status" class="status" hidden></p>
 
   <main id="game" hidden>
+    <div class="rail" id="rail">
+      <p class="rail-title">Lines of evidence</p>
+      <div id="railLines" class="rail-lines"></div>
+      <div class="rail-nav">
+        <button type="button" id="cluePrev" class="btn small">◀ Previous clue</button>
+        <span id="clueCount" class="clue-count"></span>
+        <button type="button" id="clueNext" class="btn primary">Next clue ▶</button>
+      </div>
+    </div>
     <div id="board" class="board">
       <svg id="strings" class="strings" aria-hidden="true"></svg>
 
@@ -49,6 +59,7 @@
         <div class="card-head">
           <p class="typed-label">Exhibit A · Seismic line</p>
           <div class="controls">
+            <label id="attrWrap">Show <select id="attr"></select></label>
             <label>Display <select id="domain"><option value="depth">Depth (converted)</option><option value="time">Two-way time</option></select></label>
             <label>Color <select id="cmap"><option value="gray">Gray</option><option value="rwb">Red–white–blue</option></select></label>
             <label class="range">Gain <input id="gain" type="range" min="0.3" max="4" step="0.1" value="1"><output id="gainOut">1.0×</output></label>
@@ -56,6 +67,7 @@
           </div>
         </div>
         <div class="canvas-wrap"><p id="building" class="building" hidden>Building section and logs…</p><canvas id="seis" aria-label="Synthetic seismic section"></canvas></div>
+        <p id="attrLegend" class="attr-legend"></p>
         <p class="readout"><span id="seisReadout">Move the cursor over the section to read distance, depth and time.</span><span>Right-hand scale applies at the red marker.</span></p>
       </section>
 
@@ -102,7 +114,8 @@
           <span class="pin"></span>
           <p class="typed-label">Uncertainty timeline</p>
           <svg id="timeline" class="timeline" role="img" aria-label="Spread of confidence after each note examined"></svg>
-          <p class="tl-key"><span class="k you"></span>Spread of your confidence as notes are examined (%)</p>
+          <p class="tl-key"><span class="k you"></span>Your spread of confidence (%)</p>
+          <label class="check small-check"><input type="checkbox" id="showPanel"> Show the panel's spread <span class="k panel"></span></label>
         </section>
       </div>
 
@@ -144,23 +157,52 @@
     <p>Heather Bedle, University of Oklahoma. Licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. Cases are synthetic; panel likelihoods are provisional.</p>
   </footer>
 
-  <dialog id="howDlg" class="how">
-    <p class="typed-label">How to play</p>
-    <h2>Geologists work like subsurface detectives</h2>
-    <p>Each case is a piece of the subsurface with several possible explanations, the suspects. The data rarely prove one of them. Each piece of evidence can narrow the field, and some leave it unchanged.</p>
-    <ol class="how-steps">
-      <li><b>Evidence.</b> Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
-      <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
-      <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
-      <li><b>Close the case.</b> The case report compares your distribution with a panel of interpreters who saw the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
-    </ol>
-    <p class="small">Underlined words open a short definition.</p>
-    <form method="dialog"><button class="btn primary">Open the first case</button></form>
+  <dialog id="howDlg" class="how" aria-labelledby="briefTitle">
+    <div class="brief-tabs" role="tablist">
+      <button type="button" role="tab" data-page="0" aria-selected="true">Profile</button>
+      <button type="button" role="tab" data-page="1" aria-selected="false">The evidence</button>
+      <button type="button" role="tab" data-page="2" aria-selected="false">How to play</button>
+    </div>
+
+    <section class="brief-page" data-page="0">
+      <p class="typed-label">Detective profile</p>
+      <h2 id="briefTitle">The geologist as detective</h2>
+      <p>Nobody watched these rocks being deposited, folded, faulted or buried. There is no eyewitness, only what was left behind, so every interpretation reconstructs past events from remains, as a detective reconstructs a crime from a scene.</p>
+      <p>Each case starts where real interpretation starts: a seismic line, well logs, sometimes core. The work is to build the best-supported case the evidence allows and to state how much confidence that case deserves.</p>
+      <p>Some cases close cleanly. Many close with more than one explanation still standing, because that is the usual state of subsurface evidence.</p>
+    </section>
+
+    <section class="brief-page" data-page="1" hidden>
+      <p class="typed-label">Why more than one answer survives</p>
+      <h2>The evidence is non-unique</h2>
+      <p>Different subsurface configurations can produce the same, or nearly the same, seismic response. Working back from recorded data to the rocks is therefore [[non-uniqueness|non-unique]], and more computation does not remove that. Explanations can be ranked by plausibility, with the remaining uncertainty stated.</p>
+      <p>A well is the closest thing to ground truth, and it carries uncertainty of its own: [[calibration|tool calibration]], [[cuttings-lag|lag of cuttings]] on the way to surface, and whether the [[depth-uncertainty|depth logged]] matches the depth the rock came from.</p>
+      <p>Every case therefore shows several suspects, and the case report compares the confidence placed in each with a panel of interpreters. The measure is how closely confidence tracks the strength of the evidence, not how many cases are solved.</p>
+    </section>
+
+    <section class="brief-page" data-page="2" hidden>
+      <p class="typed-label">How to play</p>
+      <h2>Working a case</h2>
+      <ol class="how-steps">
+        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. <b>Next clue</b> (or the arrow keys) steps through them in order; any note can also be opened directly. Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
+        <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
+        <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
+        <li><b>Close the case.</b> The case report compares your distribution with the panel after the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
+      </ol>
+      <p class="small">Underlined words open a short definition.</p>
+    </section>
+
+    <div class="brief-nav">
+      <button type="button" id="briefBack" class="btn">Back</button>
+      <span class="brief-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <button type="button" id="briefNext" class="btn primary">Next</button>
+    </div>
   </dialog>
 
   <div id="termPop" class="term-pop" role="dialog" hidden></div>
 
   <script src="js/synth.js"></script>
+  <script src="js/attributes.js"></script>
   <script src="js/glossary.js"></script>
   <script src="js/engine.js"></script>
   <!-- Cases: add one line per case file -->

@@ -2,6 +2,8 @@
 
 A browser game for seminars, laid out as a detective's evidence board. Geologists work with incomplete and ambiguous subsurface data, so each case has several suspects (candidate interpretations) and no single piece of evidence settles it.
 
+Clues are organized in lines of evidence: seismic, well logs, seismic attributes, and machine learning, followed by leads. A rail above the board steps through them one clue at a time (Next clue, or the arrow keys), which suits a lecture where a room follows the same sequence. Attributes (envelope, coherence, spectral decomposition, dip) and an unsupervised SOM are computed in the browser from the synthetic seismic. Machine learning clues report the model's own confidence, and the case report sets that beside how much each result actually narrows the field.
+
 On the board, the seismic line and well logs are pinned exhibits. The evidence is sticky notes circled on the exhibits and strung to the suspects they support or argue against. Confidence is shared among the suspects with sliders, and a chalkboard offers a limited number of leads (core, 3D seismic, biostratigraphy and others). An uncertainty timeline tracks how the spread of confidence changes as notes are examined.
 
 Closing the case produces a report. It compares the player's distribution with a panel distribution computed from likelihoods after the same evidence, shows how much each note and each lead narrows the field, and states what is known about the case with the confidence attached to it.
@@ -14,6 +16,7 @@ Live site (once pushed): `https://hbedle-subsurface.github.io/geo-detective/`
 index.html              page shell; one <script> line per built-in case
 css/style.css
 js/synth.js             synthetic earth: structure, rock physics, seismic in time and depth, well logs
+js/attributes.js        envelope, coherence, dip, spectral decomposition, SOM from the synthetic section
 js/glossary.js          term popups ([[key]] in case text)
 js/engine.js            game engine; reads cases, never names one
 cases/*.js              built-in cases: GW.registerCase({...})

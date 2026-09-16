@@ -182,9 +182,25 @@ Every case has at least two candidates, including at the easy tier. They appear 
 }
 ```
 
+- `line` is the line of evidence the note belongs to: `seismic`, `logs`, `attributes` or `ml`. Notes are grouped and numbered by line, and **Next clue** steps through them in that order. Without `line`, notes with a well `where` are `logs` and all others `seismic`.
 - `label` is the observation written on the note.
 - `likelihood` gives, for each candidate, how probable this observation would be if that candidate were correct, on a 0–1 scale. Only the ratios between candidates matter: equal values (0.5, 0.5, 0.5) mean the note is consistent with every suspect and does not narrow the field. A missing value counts as 0.5.
-- `where` circles the observation on an exhibit, and a red string runs from the note to the circle. `{ "x_m", "z_m", "rx_m", "rz_m" }` circles a region of the seismic line (centre and half-widths in metres, drawn correctly in both depth and time displays). `{ "well", "top_m", "base_m" }` circles a log interval. Omit `where` for observations that are not a place on the data.
+- `where` circles the observation on an exhibit, and a red string runs from the note to the circle. `{ "x_m", "z_m", "rx_m", "rz_m" }` circles a region of the seismic line (centre and half-widths in metres, drawn correctly in both depth and time displays). `{ "well", "top_m", "base_m" }` circles a log interval. Add `"attribute"` to a seismic `where` (`envelope`, `coherence`, `dip`, `spec_low`, `spec_high` or `som`) to switch Exhibit A to that display when the note is examined. Omit `where` for observations that are not a place on the data.
+- For `ml` notes, `model` describes the model and what it was trained on, and `reportedConfidence` (0–1) is the confidence the model itself reports; leave it out for unsupervised results. The likelihoods are the panel's reading of the result, which can differ sharply from the model's own confidence.
+
+### Attribute displays
+
+Exhibit A can show the amplitude section or attributes computed in the browser from the same synthetic section, all in two-way time and depth-converted like the amplitude. Each uses a fixed display range:
+
+| Key | Attribute | Computation |
+|---|---|---|
+| `envelope` | Envelope | Magnitude of the complex trace, Hilbert transform by a 61-tap filter (Taner et al., 1979). |
+| `coherence` | Coherence | Dip-steered semblance over 5 traces and ±16 ms, searching ±3 samples of dip (Marfurt et al., 1998). |
+| `dip` | Apparent dip | The dip (samples per trace) giving the highest semblance. |
+| `spec_low`, `spec_high` | Spectral decomposition | Amplitude of a five-cycle Morlet wavelet transform at 15 Hz and 45 Hz, on one shared scale (Partyka et al., 1999). |
+| `som` | SOM facies | One-dimensional self-organizing map (Kohonen, 1982), 8 classes, trained on envelope, coherence and both spectral components, each standardized and smoothed over 50 m and 18 ms. |
+
+Attribute and SOM results are computed, not written by hand, so clues about them should be checked against the displays. In these synthetic sections the SOM classes change with depth along every line because attenuation removes high frequencies, and the 15 Hz and 45 Hz components shift across faults for the same reason.
 
 The panel distribution is computed from the likelihoods by Bayes' rule, starting from equal weights. After a case is closed, the player is compared with the panel's distribution after the same notes and leads the player examined, and with the panel's distribution after all evidence notes. Run `node tools/check_cases.js` to print the panel distribution after all evidence and the effect of each lead, and adjust the likelihoods until those match the distribution the interpreters behind the case would give.
 
@@ -214,9 +230,11 @@ Leads are listed on the chalkboard. The player can request up to `maxLeads` of t
 ## Scoring shown in the case report
 
 - **Overlap with panel**: Σ min(player, panel) across candidates, using the panel distribution after the notes the player examined. 100% for identical distributions.
-- **Spread of confidence**: normalized entropy, −Σ p ln p / ln n. 100% when weight is shared equally, 0% when all weight is on one candidate.
+- **Spread of confidence**: 1 − TV / (1 − 1/n), where TV = ½ Σ |p − 1/n| is the total variation distance from equal weights. 100% when weight is shared equally, 0% when all weight is on one candidate.
 - **Uncertainty timeline**: the player's spread before each note was examined and at closing, beside the panel's spread after the same sequence of notes.
 - **Narrowing**: for each note and lead, the drop in the panel's spread from that item alone, starting from equal weights.
+- **Narrowing by line of evidence**: the same drop for all notes of one line together (seismic, well logs, attributes, machine learning), and for each lead.
+- **Machine learning results**: each `ml` note's `reportedConfidence` beside its narrowing.
 - **Largest weight**: the player's and the panel's most heavily weighted candidate.
 - **Tops**: difference between player and panel picks, flagged when within the panel's stated uncertainty.
 - **Evidence check** (optional): diagnostic notes not examined, strings the panel reads in the opposite direction, strung notes that are consistent with every suspect, the lead that narrows the field most, log types never displayed, and suspects weighted 20 points above or below the panel.

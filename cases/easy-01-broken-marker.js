@@ -227,7 +227,8 @@ GW.registerCase({
         "z_m": 1150,
         "rx_m": 520,
         "rz_m": 520
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "missing",
@@ -241,7 +242,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1180,
         "base_m": 1320
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "thickness",
@@ -256,7 +258,8 @@ GW.registerCase({
         "z_m": 1000,
         "rx_m": 1300,
         "rz_m": 350
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "oneline",
@@ -265,7 +268,8 @@ GW.registerCase({
         "normal": 0.5,
         "strikeslip": 0.8,
         "erosion": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "regionaldip",
@@ -274,7 +278,8 @@ GW.registerCase({
         "normal": 0.5,
         "strikeslip": 0.5,
         "erosion": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "shallow",
@@ -289,6 +294,72 @@ GW.registerCase({
         "z_m": 250,
         "rx_m": 450,
         "rz_m": 130
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "coh",
+      "line": "attributes",
+      "label": "Coherence: one narrow low-coherence line dips steeply east from about 550 m to the base of the line",
+      "likelihood": {
+        "normal": 0.75,
+        "strikeslip": 0.7,
+        "erosion": 0.25
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2350,
+        "z_m": 1150,
+        "rx_m": 600,
+        "rz_m": 600
+      }
+    },
+    {
+      "id": "spec45",
+      "line": "attributes",
+      "label": "Spectral decomposition, 45 Hz: Sand C is brighter west of the fault than east of it",
+      "detail": "East of the fault Sand C is about 150 m deeper.",
+      "likelihood": {
+        "normal": 0.5,
+        "strikeslip": 0.5,
+        "erosion": 0.55
+      },
+      "where": {
+        "attribute": "spec_high",
+        "x_m": 2000,
+        "z_m": 1300,
+        "rx_m": 1500,
+        "rz_m": 150
+      }
+    },
+    {
+      "id": "somorder",
+      "line": "ml",
+      "label": "SOM: classes repeat in the same vertical order on both sides of the discontinuity, stepped down to the east",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "normal": 0.7,
+        "strikeslip": 0.65,
+        "erosion": 0.3
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2300,
+        "z_m": 1200,
+        "rx_m": 900,
+        "rz_m": 500
+      }
+    },
+    {
+      "id": "faultnet",
+      "line": "ml",
+      "label": "Fault-detection network labels the discontinuity a normal fault",
+      "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse or strike-slip faults",
+      "reportedConfidence": 0.97,
+      "likelihood": {
+        "normal": 0.55,
+        "strikeslip": 0.5,
+        "erosion": 0.25
       }
     }
   ],
@@ -297,7 +368,7 @@ GW.registerCase({
     "confidence": 0.9,
     "basis": "For a real line with these data, a subsurface team would still lack strike control. A 3D survey or oriented core would be needed to exclude an oblique-slip component."
   },
-  "debrief": "Unit thicknesses that match across the fault indicate the fault moved after these beds were deposited. The missing Sand C in W2 is the borehole crossing the fault plane at about 1280 m.",
+  "debrief": "Unit thicknesses that match across the fault indicate the fault moved after these beds were deposited. The missing Sand C in W2 is the borehole crossing the fault plane at about 1280 m. The fault-detection network recognizes the discontinuity as a fault, which helps separate it from erosion, but it can only return the one fault type it was trained on, so its label and its 97% say nothing about normal versus strike-slip.",
   "leads": [
     {
       "id": "core",

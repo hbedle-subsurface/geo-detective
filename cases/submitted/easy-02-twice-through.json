@@ -225,7 +225,8 @@
         "z_m": 1000,
         "rx_m": 550,
         "rz_m": 500
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "repeat",
@@ -239,7 +240,8 @@
         "well": "W2",
         "top_m": 805,
         "base_m": 1010
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "bracket",
@@ -253,7 +255,8 @@
         "well": "W2",
         "top_m": 890,
         "base_m": 930
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "cuttings",
@@ -262,7 +265,8 @@
         "reverse": 0.6,
         "strikeslip": 0.5,
         "twosands": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "oneline",
@@ -271,6 +275,36 @@
         "reverse": 0.5,
         "strikeslip": 0.7,
         "twosands": 0.5
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "coh",
+      "line": "attributes",
+      "label": "Coherence: one narrow low-coherence line dips east through the step",
+      "likelihood": {
+        "reverse": 0.75,
+        "strikeslip": 0.7,
+        "twosands": 0.35
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2200,
+        "z_m": 1000,
+        "rx_m": 550,
+        "rz_m": 520
+      }
+    },
+    {
+      "id": "faultnet",
+      "line": "ml",
+      "label": "Fault-detection network labels the discontinuity a normal fault",
+      "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse faults",
+      "reportedConfidence": 0.95,
+      "likelihood": {
+        "reverse": 0.55,
+        "strikeslip": 0.5,
+        "twosands": 0.2
       }
     }
   ],
@@ -279,7 +313,7 @@
     "confidence": 0.9,
     "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."
   },
-  "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall.",
+  "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall. The fault-detection network finds the fault, which argues against two unrelated sands, but it labels every fault normal because that is the only type in its training set.",
   "leads": [
     {
       "id": "dipmeter",

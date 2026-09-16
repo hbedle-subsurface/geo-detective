@@ -71,7 +71,7 @@ main { padding: 0 clamp(8px, 2vw, 28px) 24px; }
   border: 14px solid #4B3220; border-image: linear-gradient(135deg, #6A4A30, #3B2616 40%, #5C3F28 70%, #33200F) 1;
   box-shadow: inset 0 0 60px rgba(0,0,0,0.45), 0 18px 40px rgba(0,0,0,0.6); }
 .board.no-wells { grid-template-areas: "case seis seis suspects" "notes notes notes side" "close close close close"; }
-.board.no-wells .notes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.board.no-wells .notes-row { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .board.no-wells .note-detail { max-width: 640px; }
 #seisPanel { align-self: start; }
 .casefile { grid-area: case; } #seisPanel { grid-area: seis; } .suspects-card { grid-area: suspects; }
@@ -167,10 +167,12 @@ body.locked .wt input, body.locked #justify { pointer-events: none; opacity: 0.6
 .evidence-card { background: transparent; box-shadow: none; padding: 10px 0 0; }
 .evidence-card > .pin { display: none; }
 .evidence-card > .typed-label { background: #EFE5CC; padding: 5px 10px; display: inline-flex; box-shadow: 0 3px 6px rgba(0,0,0,0.35); }
-.notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px 12px; margin: 14px 0 16px; }
-.note { position: relative; text-align: left; border: 0; cursor: pointer; background: var(--note); color: #2A2410; padding: 14px 9px 9px; min-height: 104px; transform: rotate(var(--tilt)); box-shadow: 0 5px 8px rgba(0,0,0,0.4); font-size: 13px; line-height: 1.3; }
+.notes { margin: 8px 0 16px; }
+.notes-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 16px 12px; margin-bottom: 8px; }
+.line-head { display: inline-block; margin: 8px 0 12px; padding: 1px 8px; font: 13px var(--typed); color: var(--ink); background: var(--line); box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
+.note { position: relative; text-align: left; border: 0; cursor: pointer; background: var(--line, var(--note)); color: #2A2410; padding: 14px 9px 9px; min-height: 104px; transform: rotate(var(--tilt)); box-shadow: 0 5px 8px rgba(0,0,0,0.4); font-size: 13px; line-height: 1.3; }
 .note.lead { background: var(--note-lead); }
-.note:not(.seen) { background: #E9D46A; filter: saturate(0.7) brightness(0.93); }
+.note:not(.seen) { filter: saturate(0.6) brightness(0.9); }
 .note:not(.seen) .note-text { opacity: 0.55; }
 .note.selected { outline: 3px solid #fff; box-shadow: 0 0 0 5px var(--string), 0 8px 14px rgba(0,0,0,0.5); z-index: 7; }
 .note .pin { top: -7px; width: 14px; height: 14px; margin-left: -7px; }
@@ -231,7 +233,7 @@ body.locked .wt input, body.locked #justify { pointer-events: none; opacity: 0.6
 .term-close { position: absolute; top: 4px; right: 6px; border: 0; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--slate); }
 
 /* case report */
-.report { background: #FBF7EC; color: var(--ink); max-width: 1000px; margin: 30px auto 0; padding: 26px clamp(16px, 4vw, 44px) 22px; box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+.report { scroll-margin-top: 110px; background: #FBF7EC; color: var(--ink); max-width: 1000px; margin: 30px auto 0; padding: 26px clamp(16px, 4vw, 44px) 22px; box-shadow: 0 12px 30px rgba(0,0,0,0.6);
   background-image: repeating-linear-gradient(transparent 0 27px, rgba(92,102,112,0.08) 27px 28px); }
 .report > h3 { font: 30px/1.1 var(--typed); color: var(--red); border-bottom: 2px solid var(--red); padding-bottom: 6px; margin-bottom: 4px; }
 .report h4 { font: 17px/1.3 var(--typed); color: var(--red); margin: 18px 0 6px; }
@@ -294,6 +296,51 @@ dialog.how form { text-align: right; margin-top: 12px; }
   .suspect { grid-template-columns: 80px 1fr; }
 }
 
+/* briefing dialog */
+dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid var(--red);
+  background-image: repeating-linear-gradient(transparent 0 27px, rgba(92,102,112,0.07) 27px 28px); }
+.brief-tabs { display: flex; gap: 2px; margin: -8px 0 14px; border-bottom: 2px solid #CDBF9F; }
+.brief-tabs button { background: none; border: 0; padding: 6px 12px; font: 14px var(--typed); color: var(--slate); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.brief-tabs button[aria-selected="true"] { color: var(--red); border-bottom-color: var(--red); }
+.brief-page p { font: 16.5px/1.6 var(--serif); }
+.brief-page h2 { margin-bottom: 10px; }
+.brief-page .how-steps li { font-size: 15px; }
+.brief-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.brief-dots { display: flex; gap: 6px; }
+.brief-dots i { width: 8px; height: 8px; border-radius: 50%; background: #CDBF9F; }
+.brief-dots i.on { background: var(--red); }
+.standing { font: 15px var(--typed); color: var(--ink); margin: 6px 0 0; }
+.standing b { color: var(--red); font-weight: 400; }
+
+/* lines of evidence rail */
+.rail { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: auto 1fr auto; gap: 8px 16px; align-items: center; padding: 8px clamp(10px, 2vw, 24px); margin: 0 0 14px; background: rgba(23, 18, 13, 0.94); border-bottom: 2px solid #6A4A30; box-shadow: 0 6px 12px rgba(0,0,0,0.5); }
+.rail-title { margin: 0; font: 15px var(--typed); color: #F3EBDD; }
+.rail-lines { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.rail-line { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 0; border-left: 5px solid var(--line); padding-left: 6px; }
+.rail-label { font-size: 12.5px; color: #D9CFBD; }
+.rail-dots { display: flex; gap: 3px; }
+.rail-dot { font: 11px var(--typed); min-width: 26px; padding: 2px 3px; border: 1px solid var(--line); background: transparent; color: #D9CFBD; cursor: pointer; border-radius: 2px; }
+.rail-dot.seen { background: var(--line); color: var(--ink); }
+.rail-dot.current { outline: 2px solid #fff; outline-offset: 1px; }
+.rail-dot:disabled { opacity: 0.45; cursor: default; }
+.rail-nav { display: flex; align-items: center; gap: 8px; }
+.clue-count { font-size: 12.5px; color: #C9BCA6; white-space: nowrap; }
+@media (max-width: 900px) { .rail { grid-template-columns: 1fr; position: static; } .rail-nav { justify-content: space-between; } }
+.attr-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 6px 0 0; font-size: 12.5px; color: var(--slate); min-height: 1.4em; }
+.attr-legend .bar { display: inline-block; width: 140px; height: 10px; border: 1px solid var(--grid); }
+.attr-legend .sw { display: inline-grid; place-items: center; width: 20px; height: 16px; color: #fff; font: 700 11px var(--sans); text-shadow: 0 0 2px rgba(0,0,0,0.7); }
+.attr-legend .leg-note { width: 100%; }
+.model-card { display: flex; flex-direction: column; gap: 2px; margin: 6px 0; padding: 6px 10px; background: #F1EBFA; border-left: 3px solid #7B5EA7; font-size: 13px; }
+.model-card b { color: #5A3E8A; }
+.note-detail { border-top: 6px solid var(--line, #F7E27A); }
+.small-check { font-size: 12px; color: var(--slate); margin-top: 4px; }
+.lines-chart { display: grid; gap: 6px; max-width: 820px; }
+.line-row { display: grid; grid-template-columns: minmax(170px, 300px) minmax(120px, 1fr) 2.5em minmax(90px, 160px); gap: 10px; align-items: center; font-size: 13.5px; }
+.line-row .track { height: 12px; }
+.line-row .val { text-align: right; font-variant-numeric: tabular-nums; }
+.line-name i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.3); }
+@media (max-width: 700px) { .line-row { grid-template-columns: 1fr 3em; } .line-row .track, .line-row .subnote { grid-column: 1 / -1; } }
+
 </style>
 
 </head>
@@ -301,9 +348,10 @@ dialog.how form { text-align: right; margin-top: 12px; }
   <header class="masthead">
     <div class="brand">
       <h1>Geo-Detective</h1>
-      <p>Subsurface cases built from seismic and well evidence. The answer is rarely certain; the uncertainty can be narrowed.</p>
+      <p>Reconstructing subsurface events no one witnessed, from the evidence they left behind.</p>
     </div>
     <div class="mast-actions">
+      <button type="button" id="briefBtn" class="btn ghost">Detective profile</button>
       <button type="button" id="howBtn" class="btn ghost">How to play</button>
       <label class="btn ghost file">Open a case file (.json)
         <input type="file" id="caseFile" accept=".json,application/json" hidden>
@@ -319,6 +367,15 @@ dialog.how form { text-align: right; margin-top: 12px; }
   <p id="status" class="status" hidden></p>
 
   <main id="game" hidden>
+    <div class="rail" id="rail">
+      <p class="rail-title">Lines of evidence</p>
+      <div id="railLines" class="rail-lines"></div>
+      <div class="rail-nav">
+        <button type="button" id="cluePrev" class="btn small">◀ Previous clue</button>
+        <span id="clueCount" class="clue-count"></span>
+        <button type="button" id="clueNext" class="btn primary">Next clue ▶</button>
+      </div>
+    </div>
     <div id="board" class="board">
       <svg id="strings" class="strings" aria-hidden="true"></svg>
 
@@ -335,6 +392,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
         <div class="card-head">
           <p class="typed-label">Exhibit A · Seismic line</p>
           <div class="controls">
+            <label id="attrWrap">Show <select id="attr"></select></label>
             <label>Display <select id="domain"><option value="depth">Depth (converted)</option><option value="time">Two-way time</option></select></label>
             <label>Color <select id="cmap"><option value="gray">Gray</option><option value="rwb">Red–white–blue</option></select></label>
             <label class="range">Gain <input id="gain" type="range" min="0.3" max="4" step="0.1" value="1"><output id="gainOut">1.0×</output></label>
@@ -342,6 +400,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
           </div>
         </div>
         <div class="canvas-wrap"><p id="building" class="building" hidden>Building section and logs…</p><canvas id="seis" aria-label="Synthetic seismic section"></canvas></div>
+        <p id="attrLegend" class="attr-legend"></p>
         <p class="readout"><span id="seisReadout">Move the cursor over the section to read distance, depth and time.</span><span>Right-hand scale applies at the red marker.</span></p>
       </section>
 
@@ -388,7 +447,8 @@ dialog.how form { text-align: right; margin-top: 12px; }
           <span class="pin"></span>
           <p class="typed-label">Uncertainty timeline</p>
           <svg id="timeline" class="timeline" role="img" aria-label="Spread of confidence after each note examined"></svg>
-          <p class="tl-key"><span class="k you"></span>Spread of your confidence as notes are examined (%)</p>
+          <p class="tl-key"><span class="k you"></span>Your spread of confidence (%)</p>
+          <label class="check small-check"><input type="checkbox" id="showPanel"> Show the panel's spread <span class="k panel"></span></label>
         </section>
       </div>
 
@@ -430,18 +490,46 @@ dialog.how form { text-align: right; margin-top: 12px; }
     <p>Heather Bedle, University of Oklahoma. Licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. Cases are synthetic; panel likelihoods are provisional.</p>
   </footer>
 
-  <dialog id="howDlg" class="how">
-    <p class="typed-label">How to play</p>
-    <h2>Geologists work like subsurface detectives</h2>
-    <p>Each case is a piece of the subsurface with several possible explanations, the suspects. The data rarely prove one of them. Each piece of evidence can narrow the field, and some leave it unchanged.</p>
-    <ol class="how-steps">
-      <li><b>Evidence.</b> Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
-      <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
-      <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
-      <li><b>Close the case.</b> The case report compares your distribution with a panel of interpreters who saw the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
-    </ol>
-    <p class="small">Underlined words open a short definition.</p>
-    <form method="dialog"><button class="btn primary">Open the first case</button></form>
+  <dialog id="howDlg" class="how" aria-labelledby="briefTitle">
+    <div class="brief-tabs" role="tablist">
+      <button type="button" role="tab" data-page="0" aria-selected="true">Profile</button>
+      <button type="button" role="tab" data-page="1" aria-selected="false">The evidence</button>
+      <button type="button" role="tab" data-page="2" aria-selected="false">How to play</button>
+    </div>
+
+    <section class="brief-page" data-page="0">
+      <p class="typed-label">Detective profile</p>
+      <h2 id="briefTitle">The geologist as detective</h2>
+      <p>Nobody watched these rocks being deposited, folded, faulted or buried. There is no eyewitness, only what was left behind, so every interpretation reconstructs past events from remains, as a detective reconstructs a crime from a scene.</p>
+      <p>Each case starts where real interpretation starts: a seismic line, well logs, sometimes core. The work is to build the best-supported case the evidence allows and to state how much confidence that case deserves.</p>
+      <p>Some cases close cleanly. Many close with more than one explanation still standing, because that is the usual state of subsurface evidence.</p>
+    </section>
+
+    <section class="brief-page" data-page="1" hidden>
+      <p class="typed-label">Why more than one answer survives</p>
+      <h2>The evidence is non-unique</h2>
+      <p>Different subsurface configurations can produce the same, or nearly the same, seismic response. Working back from recorded data to the rocks is therefore [[non-uniqueness|non-unique]], and more computation does not remove that. Explanations can be ranked by plausibility, with the remaining uncertainty stated.</p>
+      <p>A well is the closest thing to ground truth, and it carries uncertainty of its own: [[calibration|tool calibration]], [[cuttings-lag|lag of cuttings]] on the way to surface, and whether the [[depth-uncertainty|depth logged]] matches the depth the rock came from.</p>
+      <p>Every case therefore shows several suspects, and the case report compares the confidence placed in each with a panel of interpreters. The measure is how closely confidence tracks the strength of the evidence, not how many cases are solved.</p>
+    </section>
+
+    <section class="brief-page" data-page="2" hidden>
+      <p class="typed-label">How to play</p>
+      <h2>Working a case</h2>
+      <ol class="how-steps">
+        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. <b>Next clue</b> (or the arrow keys) steps through them in order; any note can also be opened directly. Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
+        <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
+        <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
+        <li><b>Close the case.</b> The case report compares your distribution with the panel after the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
+      </ol>
+      <p class="small">Underlined words open a short definition.</p>
+    </section>
+
+    <div class="brief-nav">
+      <button type="button" id="briefBack" class="btn">Back</button>
+      <span class="brief-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <button type="button" id="briefNext" class="btn primary">Next</button>
+    </div>
   </dialog>
 
   <div id="termPop" class="term-pop" role="dialog" hidden></div>
@@ -822,6 +910,168 @@ dialog.how form { text-align: right; margin-top: 12px; }
 })();
 
 </script>
+  <script>/* js/attributes.js */
+/* Geo-Detective: seismic attributes and an unsupervised classification computed from the synthetic section.
+ * All attributes are computed on the two-way-time section and depth-converted with the same
+ * processing velocity model as the amplitude display.
+ * License: CC BY-SA 4.0
+ */
+(function () {
+  'use strict';
+  const GW = (window.GW = window.GW || {});
+
+  GW.ATTRIBUTES = {
+    amplitude: { label: 'Amplitude', kind: 'diverging' },
+    envelope: { label: 'Envelope', kind: 'sequential', min: 0, max: 1.2, term: 'envelope' },
+    coherence: { label: 'Coherence', kind: 'coherence', min: 0.2, max: 1, term: 'coherence' },
+    dip: { label: 'Apparent dip', kind: 'sequential', min: 0, max: 3, unit: 'samples/trace', term: 'dip-attribute' },
+    spec_low: { label: 'Spectral, 15 Hz', kind: 'sequential', min: 0, max: 0.5, freq: 15, term: 'spectral-decomposition' },
+    spec_high: { label: 'Spectral, 45 Hz', kind: 'sequential', min: 0, max: 0.5, freq: 45, term: 'spectral-decomposition' },
+    som: { label: 'SOM facies', kind: 'classes', term: 'som' }
+  };
+
+  function hilbert(x, n) {
+    const L = 30, h = [];
+    for (let k = -L; k <= L; k++) h.push(k % 2 ? (2 / (Math.PI * k)) * (0.54 + 0.46 * Math.cos((Math.PI * k) / L)) : 0);
+    const out = new Float32Array(n);
+    for (let k = 0; k < n; k++) { let s = 0; for (let m = -L; m <= L; m++) { const j = k - m; if (j >= 0 && j < n) s += x[j] * h[m + L]; } out[k] = s; }
+    return out;
+  }
+  function morletMag(x, n, f, dt) {
+    const sigma = 5 / (2 * Math.PI * f), H = Math.ceil((3 * sigma) / dt), re = [], im = [];
+    let norm = 0;
+    for (let k = -H; k <= H; k++) { const t = k * dt, g = Math.exp((-t * t) / (2 * sigma * sigma)); re.push(g * Math.cos(2 * Math.PI * f * t)); im.push(g * Math.sin(2 * Math.PI * f * t)); norm += g; }
+    const out = new Float32Array(n);
+    for (let k = 0; k < n; k++) {
+      let a = 0, b = 0;
+      for (let m = -H; m <= H; m++) { const j = k - m; if (j >= 0 && j < n) { a += x[j] * re[m + H]; b += x[j] * im[m + H]; } }
+      out[k] = (2 * Math.sqrt(a * a + b * b)) / norm;
+    }
+    return out;
+  }
+
+  // Dip-steered three-trace semblance; apparent dip is the lag with the highest semblance.
+  function coherenceDip(sec) {
+    const { nx, nt, timeData: d } = sec, W = 8, P = 3, T = 2;
+    const coh = new Float32Array(nx * nt), dip = new Float32Array(nx * nt);
+    const num = new Float32Array(nt + 1), den = new Float32Array(nt + 1);
+    for (let i = 0; i < nx; i++) {
+      const cols = [];
+      for (let q = -T; q <= T; q++) cols.push(Math.min(nx - 1, Math.max(0, i + q)) * nt);
+      const best = new Float32Array(nt).fill(-1), bestP = new Float32Array(nt);
+      for (let p = -P; p <= P; p++) {
+        num[0] = 0; den[0] = 0;
+        for (let k = 0; k < nt; k++) {
+          let sum = 0, e = 0;
+          for (let q = -T; q <= T; q++) { const kk = Math.min(nt - 1, Math.max(0, k + q * p)), v = d[cols[q + T] + kk]; sum += v; e += v * v; }
+          num[k + 1] = num[k] + sum * sum; den[k + 1] = den[k] + e;
+        }
+        for (let k = 0; k < nt; k++) {
+          const lo = Math.max(0, k - W), hi = Math.min(nt, k + W + 1), e = den[hi] - den[lo];
+          const sv = e > 1e-6 ? (num[hi] - num[lo]) / ((2 * T + 1) * e) : 1;
+          if (sv > best[k]) { best[k] = sv; bestP[k] = p; }
+        }
+      }
+      for (let k = 0; k < nt; k++) { coh[i * nt + k] = best[k]; dip[i * nt + k] = Math.abs(bestP[k]); }
+    }
+    return { coh, dip };
+  }
+  function boxSmooth(a, nx, nt, hx, ht) {
+    const tmp = new Float32Array(nx * nt), out = new Float32Array(nx * nt);
+    for (let i = 0; i < nx; i++) { let s = 0; const c = i * nt; for (let k = -ht; k <= ht; k++) s += a[c + Math.min(nt - 1, Math.max(0, k))];
+      for (let k = 0; k < nt; k++) { tmp[c + k] = s / (2 * ht + 1); s += a[c + Math.min(nt - 1, k + ht + 1)] - a[c + Math.max(0, k - ht)]; } }
+    for (let k = 0; k < nt; k++) for (let i = 0; i < nx; i++) { let s = 0, n = 0; for (let q = -hx; q <= hx; q++) { const ii = i + q; if (ii >= 0 && ii < nx) { s += tmp[ii * nt + k]; n++; } } out[i * nt + k] = s / n; }
+    return out;
+  }
+
+  // One-dimensional self-organizing map (Kohonen, 1982) on standardized attribute vectors.
+  function som(features, nx, nt, K, seed) {
+    let s = seed || 3;
+    const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    const F = features.length, N = nx * nt;
+    const mean = [], sd = [];
+    features.forEach((f, q) => {
+      let m = 0, v = 0, c = 0;
+      for (let i = 0; i < N; i += 5) { m += f[i]; c++; }
+      m /= c;
+      for (let i = 0; i < N; i += 5) v += (f[i] - m) ** 2;
+      mean[q] = m; sd[q] = Math.sqrt(v / c) || 1;
+    });
+    const vec = (i, out) => { for (let q = 0; q < F; q++) out[q] = (features[q][i] - mean[q]) / sd[q]; return out; };
+    const nodes = [];
+    for (let k = 0; k < K; k++) nodes.push(vec(Math.floor(rnd() * N), new Float32Array(F)));
+    const x = new Float32Array(F), iters = 30000;
+    for (let it = 0; it < iters; it++) {
+      vec(Math.floor(rnd() * N), x);
+      let bk = 0, bd = Infinity;
+      for (let k = 0; k < K; k++) { let dd = 0; for (let q = 0; q < F; q++) dd += (x[q] - nodes[k][q]) ** 2; if (dd < bd) { bd = dd; bk = k; } }
+      const frac = it / iters, lr = 0.5 * (1 - frac) + 0.01, rad = Math.max(0.5, (K / 2) * (1 - frac));
+      for (let k = 0; k < K; k++) {
+        const h = Math.exp(-((k - bk) ** 2) / (2 * rad * rad)) * lr;
+        for (let q = 0; q < F; q++) nodes[k][q] += h * (x[q] - nodes[k][q]);
+      }
+    }
+    const cls = new Uint8Array(N);
+    for (let i = 0; i < N; i++) {
+      vec(i, x);
+      let bk = 0, bd = Infinity;
+      for (let k = 0; k < K; k++) { let dd = 0; for (let q = 0; q < F; q++) dd += (x[q] - nodes[k][q]) ** 2; if (dd < bd) { bd = dd; bk = k; } }
+      cls[i] = bk;
+    }
+    return { cls, nodes, mean, sd };
+  }
+
+  function toDepth(sec, arr) {
+    const out = new Float32Array(sec.nx * sec.nz);
+    for (let i = 0; i < sec.nx; i++) for (let j = 0; j < sec.nz; j++) {
+      const k = sec.tproc[i * sec.nz + j] / sec.dt, k0 = Math.floor(k), v = k - k0;
+      out[i * sec.nz + j] = k0 + 1 < sec.nt ? arr[i * sec.nt + k0] * (1 - v) + arr[i * sec.nt + k0 + 1] * v : 0;
+    }
+    return out;
+  }
+  function toDepthNearest(sec, arr) {
+    const out = new Uint8Array(sec.nx * sec.nz);
+    for (let i = 0; i < sec.nx; i++) for (let j = 0; j < sec.nz; j++) {
+      const k = Math.min(sec.nt - 1, Math.round(sec.tproc[i * sec.nz + j] / sec.dt));
+      out[i * sec.nz + j] = arr[i * sec.nt + k];
+    }
+    return out;
+  }
+
+  // Compute one attribute (and anything it depends on), caching results on the section object.
+  GW.attribute = function (sec, key) {
+    sec.attr = sec.attr || {};
+    if (key === 'amplitude') return { time: sec.timeData, depth: sec.data };
+    if (sec.attr[key]) return sec.attr[key];
+    const { nx, nt, timeData: d, dt } = sec;
+    let time;
+    if (key === 'envelope') {
+      time = new Float32Array(nx * nt);
+      for (let i = 0; i < nx; i++) {
+        const tr = d.subarray(i * nt, (i + 1) * nt), h = hilbert(tr, nt);
+        for (let k = 0; k < nt; k++) time[i * nt + k] = Math.hypot(tr[k], h[k]);
+      }
+    } else if (key === 'coherence' || key === 'dip') {
+      const r = coherenceDip(sec);
+      sec.attr.coherence = { time: r.coh, depth: toDepth(sec, r.coh) };
+      sec.attr.dip = { time: r.dip, depth: toDepth(sec, r.dip) };
+      return sec.attr[key];
+    } else if (key === 'spec_low' || key === 'spec_high') {
+      const f = GW.ATTRIBUTES[key].freq;
+      time = new Float32Array(nx * nt);
+      for (let i = 0; i < nx; i++) time.set(morletMag(d.subarray(i * nt, (i + 1) * nt), nt, f, dt), i * nt);
+    } else if (key === 'som') {
+      const feats = ['envelope', 'coherence', 'spec_low', 'spec_high'].map((k) => boxSmooth(GW.attribute(sec, k).time, nx, nt, 2, 4));
+      const K = 8, r = som(feats, nx, nt, K, 11);
+      sec.attr.som = { time: r.cls, depth: toDepthNearest(sec, r.cls), classes: K, inputs: ['Envelope', 'Coherence', 'Spectral 15 Hz', 'Spectral 45 Hz', 'each smoothed over 50 m and 18 ms'] };
+      return sec.attr.som;
+    }
+    sec.attr[key] = { time, depth: toDepth(sec, time) };
+    return sec.attr[key];
+  };
+})();
+
+</script>
   <script>/* js/glossary.js */
 /* Geo-Detective glossary. Case text links a term with [[key]] or [[key|shown text]].
  * New cases can add entries in their own "glossary" object; those merge with this list.
@@ -842,8 +1092,15 @@ dialog.how form { text-align: right; margin-top: 12px; }
     'depth-conversion': ['Depth conversion', 'Transforming a section recorded in two-way time into depth using a velocity model. The velocity model is smoother than the real rock and carries error, so converted depths differ from well depths by amounts that grow with depth.'],
     'footprint': ['Acquisition footprint', 'Amplitude striping that repeats with the spacing of sources and receivers, left over from uneven acquisition geometry.'],
     'pushdown': ['Velocity pull-up and push-down', 'Reflections beneath a body faster than its surroundings arrive earlier and appear raised (pull-up); beneath a slower body they arrive later and appear lowered (push-down). The effect is strongest in time and remains after depth conversion wherever the velocity model is smoother than the rocks.'],
-    'spread': ['Spread of confidence', 'Normalized entropy of a confidence distribution. It is 100% when weight is shared equally among all suspects and 0% when all weight sits on one. Evidence that favors some suspects over others lowers the spread.'],
+    'spread': ['Spread of confidence', 'How evenly confidence is shared among the suspects: 100% when all suspects carry equal weight and 0% when all weight sits on one. It is computed as one minus the total variation distance between the distribution and equal weights, scaled so the largest possible distance is 100%. Evidence that favors some suspects over others lowers it.'],
     'likelihood': ['Likelihood', 'How probable an observation would be if a given interpretation were correct. An observation that is equally probable under every interpretation leaves the distribution unchanged, however striking it looks.'],
+    'non-uniqueness': ['Non-uniqueness', 'The property of an inverse problem that more than one model fits the observed data equally well. Seismic responses depend on contrasts, thicknesses and geometry together, so different combinations can produce nearly the same record, and noise and limited bandwidth widen the set of models that fit.'],
+    'envelope': ['Envelope (reflection strength)', 'The magnitude of the complex trace built from a seismic trace and its Hilbert transform (Taner et al., 1979). It measures local energy independent of phase and polarity. Strong impedance contrasts, tuning of thin beds, and hydrocarbon or lithology changes often raise it.'],
+    'coherence': ['Coherence', 'A measure of how similar neighboring traces are within a short time window, here dip-steered semblance (Marfurt et al., 1998). Values near 1 mean continuous reflections; low values mark lateral changes such as faults, channel edges, or noise.'],
+    'dip-attribute': ['Apparent dip', 'The time shift between neighboring traces that best aligns them, measured along the section. Large values mark steeply dipping reflections, and abrupt changes can mark faults or folds.'],
+    'spectral-decomposition': ['Spectral decomposition', 'The amplitude of the seismic trace within a narrow frequency band around a chosen frequency (Partyka et al., 1999). Thin beds brighten at the frequency where they tune, so maps at several frequencies can indicate changes in bed thickness; absorption lowers high-frequency amplitude.'],
+    'som': ['Self-organizing map (SOM)', 'An unsupervised neural network (Kohonen, 1982) that groups samples with similar attribute values into classes arranged so neighboring classes are similar. The classes carry no geologic labels; interpreting what a class represents requires context from wells and geology.'],
+    'machine-learning': ['Machine learning', 'Algorithms that learn patterns from data rather than from explicit rules. Supervised models learn from labeled examples and report confidence relative to their training data; unsupervised models group data without labels. Neither has geologic knowledge beyond what the inputs and training labels carry.'],
     'two-way-time': ['Two-way time (TWT)', 'Time for seismic energy to travel down to a reflector and back up. Time and depth are not proportional, because velocity changes with depth and laterally.'],
     'reflection': ['Reflection', 'Energy returned to the surface where acoustic impedance changes across a boundary. A continuous reflection usually follows a bedding surface, although it can also follow an unconformity or a fluid contact.'],
     'wavelet': ['Wavelet', 'The short, band-limited signal that the seismic method sends into the ground and records back. Each reflection on a section is a copy of the wavelet scaled by the reflection coefficient, so beds thinner than about a quarter of a wavelength are not separated.'],
@@ -920,6 +1177,17 @@ dialog.how form { text-align: right; margin-top: 12px; }
     DT: { label: 'Sonic', unit: 'us/ft', min: 190, max: 40, term: 'sonic' },
     DN: { label: 'Density–neutron', combo: ['RHOB', 'NPHI'] }
   };
+  const LINES = [
+    { id: 'seismic', label: 'Seismic', color: '#F7E27A' },
+    { id: 'logs', label: 'Well logs', color: '#BFDDF2' },
+    { id: 'attributes', label: 'Attributes', color: '#C9E7B8' },
+    { id: 'ml', label: 'Machine learning', color: '#D9CBF2' },
+    { id: 'lead', label: 'Leads', color: '#F4B6C2' }
+  ];
+  const lineOf = (e) => (e.kind === 'lead' ? 'lead' : e.line || (e.where && e.where.well ? 'logs' : 'seismic'));
+  const lineInfo = (id) => LINES.find((l) => l.id === id) || LINES[0];
+  const SEQ = [[13, 8, 35], [84, 15, 110], [165, 44, 96], [230, 92, 48], [252, 180, 50], [252, 253, 191]];
+  const CLASS_COLORS = [[31, 119, 180], [255, 127, 14], [44, 160, 44], [214, 39, 40], [148, 103, 189], [140, 86, 75], [227, 119, 194], [127, 127, 127]];
   const TOP_COLORS = ['#841617', '#2F6690', '#4F7A28', '#A86A12', '#6D4C8D', '#1F7A7A'];
   const CAND_COLORS = ['#9E1B22', '#2F6690', '#A86A12', '#4F7A28', '#6D4C8D'];
 
@@ -992,14 +1260,17 @@ dialog.how form { text-align: right; margin-top: 12px; }
   function termsIn(s) { const out = []; String(s || '').replace(/\[\[([^\]|]+)/g, (m, k) => out.push(k)); return out; }
   function showTerm(btn) {
     const g = gloss(btn.dataset.term); if (!g) return;
-    const pop = $('#termPop');
+    const pop = $('#termPop'), host = btn.closest('dialog') || document.body;
+    if (pop.parentElement !== host) host.appendChild(pop);
     pop.innerHTML = '<div class="term-title">' + esc(g[0]) + '</div><p>' + esc(g[1]) + '</p><button type="button" class="term-close" aria-label="Close">×</button>';
     pop.hidden = false;
-    const r = btn.getBoundingClientRect();
-    const w = Math.min(340, window.innerWidth - 24);
+    const r = btn.getBoundingClientRect(), inDlg = host !== document.body;
+    const hr = inDlg ? host.getBoundingClientRect() : { left: -window.scrollX, top: -window.scrollY, width: window.innerWidth };
+    const w = Math.min(340, (inDlg ? hr.width : window.innerWidth) - 24);
     pop.style.width = w + 'px';
-    pop.style.left = clamp(r.left + window.scrollX, 12, window.scrollX + window.innerWidth - w - 12) + 'px';
-    pop.style.top = r.bottom + window.scrollY + 6 + 'px';
+    const left = r.left - hr.left + (inDlg ? host.scrollLeft : 0);
+    pop.style.left = clamp(left, 12, (inDlg ? hr.width : window.scrollX + window.innerWidth) - w - 12) + 'px';
+    pop.style.top = r.bottom - hr.top + (inDlg ? host.scrollTop : 0) + 6 + 'px';
     pop.querySelector('.term-close').focus();
   }
 
@@ -1019,10 +1290,14 @@ dialog.how form { text-align: right; margin-top: 12px; }
   }
 
   /* ---------- evidence model ---------- */
+  function orderedEvidence() {
+    const ev = (S.c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e));
+    return LINES.flatMap((l) => ev.filter((e) => lineOf(e) === l.id));
+  }
   function allItems() { const c = S.c; return [...(c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(c.leads || []).map((e) => Object.assign({ kind: 'lead' }, e))]; }
   function itemById(id) { return allItems().find((e) => e.id === id); }
   function noteNo(id) {
-    const c = S.c, ei = (c.evidence || []).findIndex((e) => e.id === id);
+    const c = S.c, ei = orderedEvidence().findIndex((e) => e.id === id);
     if (ei >= 0) return 'E' + (ei + 1);
     return 'L' + ((c.leads || []).findIndex((e) => e.id === id) + 1);
   }
@@ -1037,10 +1312,13 @@ dialog.how form { text-align: right; margin-top: 12px; }
     cands.forEach((k) => (p[k.id] /= s));
     return p;
   }
+  // 1 when weight is shared equally, 0 when all weight is on one suspect:
+  // one minus the total variation distance from equal weights, normalized by its maximum.
   function spread(dist) {
     const v = Object.values(dist), n = v.length;
     if (n < 2) return 0;
-    return -v.reduce((a, p) => a + (p > 0 ? p * Math.log(p) : 0), 0) / Math.log(n);
+    const tv = 0.5 * v.reduce((a, p) => a + Math.abs(p - 1 / n), 0);
+    return 1 - tv / (1 - 1 / n);
   }
   function diagnosticRatio(e) {
     if (!e.likelihood) return 1;
@@ -1057,9 +1335,9 @@ dialog.how form { text-align: right; margin-top: 12px; }
     Object.assign(S, {
       expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      links: {}, examined: [], snaps: [], selected: null, anchors: {},
+      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null,
       picks: {}, submitted: false, flatten: '', logType: 'GR',
-      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
+      viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', attr: 'amplitude', attrsSeen: new Set(['amplitude']), showPanel: false, gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
     (c.tops || []).forEach((t) => (S.picks[t.name] = {}));
     S.activeTop = c.tops && c.tops.length ? c.tops[0].name : null;
@@ -1123,7 +1401,14 @@ dialog.how form { text-align: right; margin-top: 12px; }
       $('#wellNotes').innerHTML = c.wells.map((w) =>
         '<li><strong>' + esc(w.name) + '</strong> ±' + (w.depthUncertainty_m || 0) + ' m. ' + rich(w.note || '') + '</li>').join('');
     }
+    const synth = c.seismic.type === 'synthetic';
+    $('#attrWrap').hidden = !synth;
+    $('#attr').innerHTML = Object.entries(GW.ATTRIBUTES).map(([k, a]) => '<option value="' + k + '">' + a.label + '</option>').join('');
+    $('#attr').value = S.attr;
+    $('#showPanel').checked = S.showPanel;
+    renderLegend();
     renderSuspects();
+    renderRail();
     renderNotes();
     renderNoteDetail();
     renderLeads();
@@ -1165,22 +1450,60 @@ dialog.how form { text-align: right; margin-top: 12px; }
 
   /* ---------- evidence notes ---------- */
   function renderNotes() {
-    const items = [...(S.c.evidence || []).map((e) => Object.assign({ kind: 'evidence' }, e)), ...(S.c.leads || []).filter((l) => S.examined.includes(l.id)).map((e) => Object.assign({ kind: 'lead' }, e))];
-    $('#notes').innerHTML = items.map((e, i) => {
+    const leads = (S.c.leads || []).filter((l) => S.examined.includes(l.id)).map((e) => Object.assign({ kind: 'lead' }, e));
+    const items = [...orderedEvidence(), ...leads];
+    let html = '', lastLine = null, i = 0;
+    items.forEach((e) => {
+      const ln = lineOf(e);
+      if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
       const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
       const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
-      return '<button type="button" class="note ' + e.kind + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i * 37) % 7) - 3) * 0.6 + 'deg">' +
+      html += '<button type="button" class="note' + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i++ * 37) % 7) - 3) * 0.6 + 'deg;--line:' + lineInfo(ln).color + '">' +
         '<span class="pin"></span><span class="note-no">' + noteNo(e.id) + (seen ? '' : ' · unexamined') + '</span>' +
         '<span class="note-text">' + (seen ? rich(e.label) : esc(e.label)) + '</span>' +
         (tags ? '<span class="tags">' + tags + '</span>' : '') + '</button>';
-    }).join('');
+    });
+    if (lastLine) html += '</div>';
+    $('#notes').innerHTML = html;
   }
+
+  /* ---------- lines of evidence rail and walk-through ---------- */
+  function walkOrder() { return orderedEvidence().map((e) => e.id); }
+  function renderRail() {
+    const ev = orderedEvidence(), leads = S.c.leads || [];
+    const groups = LINES.map((l) => ({ l, items: l.id === 'lead' ? leads.map((x) => Object.assign({ kind: 'lead' }, x)) : ev.filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
+    const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
+    $('#railLines').innerHTML = groups.map((g) =>
+      '<div class="rail-line" style="--line:' + g.l.color + '"><span class="rail-label">' + g.l.label + '</span><span class="rail-dots">' +
+      g.items.map((e) => '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + '" data-rail="' + esc(e.id) + '"' + (e.kind === 'lead' && !S.examined.includes(e.id) ? ' disabled' : '') + ' title="' + esc(noteNo(e.id) + ' ' + e.label) + '">' + noteNo(e.id) + '</button>').join('') +
+      '</span></div>').join('');
+    const next = order.find((id, k) => k > pos && !S.examined.includes(id)) || order[pos + 1];
+    $('#clueNext').disabled = !next;
+    $('#cluePrev').disabled = pos <= 0;
+    $('#clueCount').textContent = S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+  }
+  function stepClue(dir) {
+    const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
+    let id;
+    if (dir > 0) id = order.find((x, k) => k > pos && !S.examined.includes(x)) || order[pos + 1];
+    else id = order[Math.max(0, pos - 1)];
+    if (id) { examine(id); focusClue(id); }
+  }
+  function focusClue(id) {
+    const e = itemById(id); if (!e) return;
+    const target = e.where ? (e.where.well ? $('#logPanel') : $('#seisPanel')) : $('#noteDetail');
+    if (target && !target.hidden) target.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' });
+  }
+
   function renderNoteDetail() {
     const box = $('#noteDetail'), e = S.selected && itemById(S.selected);
     if (!e) { box.innerHTML = '<p class="howto">Select a note to examine it. Notes that point at the data are circled on the exhibits.</p>'; return; }
     const links = S.links[e.id] || {};
-    const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A.') : '';
-    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + (e.kind === 'lead' ? ' · lead' : '') + '</span><span class="where">' + where + '</span></div>' +
+    const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A' + (e.where.attribute ? ', ' + GW.ATTRIBUTES[e.where.attribute].label.toLowerCase() + ' display.' : '.')) : '';
+    const ln = lineInfo(lineOf(e));
+    box.style.setProperty('--line', ln.color);
+    const model = lineOf(e) === 'ml' && (e.model || e.reportedConfidence != null) ? '<p class="model-card">' + (e.model ? '<span>' + rich(e.model) + '</span>' : '') + (e.reportedConfidence != null ? '<span>Confidence reported by the model: <b>' + pct(e.reportedConfidence) + '</b></span>' : '') + '</p>' : '';
+    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + model +
       (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
       '<p class="howto">String this note to the suspects it bears on:</p>' +
       '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
@@ -1195,8 +1518,28 @@ dialog.how form { text-align: right; margin-top: 12px; }
       S.examined.push(id);
     }
     S.selected = id;
-    renderNotes(); renderNoteDetail(); renderLeads();
+    const it = itemById(id);
+    if (it && it.where && it.where.attribute && S.section) setAttr(it.where.attribute);
+    else if (it && it.where && it.where.x_m != null && S.attr !== 'amplitude' && !(it.where.attribute)) setAttr('amplitude');
+    renderNotes(); renderNoteDetail(); renderLeads(); renderRail();
     drawSeis(); drawLogs(); drawTimeline(); drawStrings();
+  }
+
+  function setAttr(k) {
+    S.attr = k; S.attrsSeen.add(k); $('#attr').value = k; S._imgKey = null;
+    $('#building').hidden = false; $('#building').textContent = 'Computing ' + GW.ATTRIBUTES[k].label.toLowerCase() + '…';
+    setTimeout(() => { GW.attribute(S.section, k); $('#building').hidden = true; renderLegend(); drawSeis(); drawStrings(); }, 20);
+  }
+  function renderLegend() {
+    const a = GW.ATTRIBUTES[S.attr] || GW.ATTRIBUTES.amplitude, el = $('#attrLegend');
+    if (a.kind === 'diverging') { el.innerHTML = '<span>Amplitude</span><span class="bar" style="background:' + (S.cmap === 'gray' ? 'linear-gradient(90deg,#fff,#000)' : 'linear-gradient(90deg,#9e1b1b,#fff,#14327a)') + '"></span><span>− / +</span>'; return; }
+    if (a.kind === 'classes') {
+      const inputs = S.section && S.section.attr && S.section.attr.som ? S.section.attr.som.inputs.join(', ') : '';
+      el.innerHTML = '<span>' + rich('[[som|SOM]] class') + '</span>' + CLASS_COLORS.map((c, i) => '<span class="sw" style="background:rgb(' + c + ')">' + (i + 1) + '</span>').join('') + '<span class="leg-note">Unordered groups; inputs: ' + esc(inputs) + '</span>';
+      return;
+    }
+    const grad = a.kind === 'coherence' ? 'linear-gradient(90deg,#000,#fff)' : 'linear-gradient(90deg,' + SEQ.map((c) => 'rgb(' + c + ')').join(',') + ')';
+    el.innerHTML = '<span>' + rich('[[' + a.term + '|' + a.label + ']]') + '</span><span>' + a.min + '</span><span class="bar" style="background:' + grad + '"></span><span>' + a.max + (a.unit ? ' ' + a.unit : '') + '</span>';
   }
 
   /* ---------- leads ---------- */
@@ -1217,7 +1560,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
   /* ---------- timeline ---------- */
   function drawTimeline(target) {
     const svg = target || $('#timeline'); if (!svg || !S.c) return;
-    const W = target ? 640 : 260, H = target ? 220 : 150, m = { l: 34, r: 10, t: 12, b: 30 };
+    const W = target ? 640 : 260, H = target ? 230 : 160, m = { l: 34, r: 12, t: 12, b: 36 };
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     const n = S.examined.length;
     const player = S.snaps.slice(0, n).map(spread);
@@ -1228,9 +1571,13 @@ dialog.how form { text-align: right; margin-top: 12px; }
     const Y = (v) => m.t + (1 - v) * (H - m.t - m.b);
     let g = '';
     [0, 0.5, 1].forEach((v) => { g += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" class="tl-grid"/><text x="' + (m.l - 5) + '" y="' + (Y(v) + 4) + '" class="tl-ax" text-anchor="end">' + v * 100 + '</text>'; });
-    for (let j = 0; j <= n; j++) g += '<text x="' + X(j) + '" y="' + (H - m.b + 16) + '" class="tl-ax" text-anchor="middle">' + (j ? noteNo(S.examined[j - 1]) : 'Start') + '</text>';
+    const gapPx = n ? (W - m.l - m.r) / n : 40, every = Math.max(1, Math.ceil(26 / gapPx));
+    for (let j = 0; j <= n; j++) {
+      if (j) { const ln = lineInfo(lineOf(itemById(S.examined[j - 1]) || {})), rw = Math.min(22, gapPx - 2); g += '<rect x="' + (X(j) - rw / 2) + '" y="' + (H - m.b + 5) + '" width="' + rw + '" height="14" rx="2" fill="' + ln.color + '"/>'; }
+      if (j === 0 || j % every === 0 || j === n) g += '<text x="' + X(j) + '" y="' + (H - m.b + (j ? 16 : 28)) + '" class="tl-ax" text-anchor="' + (j ? 'middle' : 'start') + '">' + (j ? noteNo(S.examined[j - 1]) : 'Start') + '</text>';
+    }
     const path = (arr) => arr.map((v, j) => (j ? 'L' : 'M') + X(j).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
-    if (S.submitted || target) g += '<path d="' + path(panel) + '" class="tl-panel"/>' + panel.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="3" class="tl-panel-dot"/>').join('');
+    if (S.submitted || target || S.showPanel) g += '<path d="' + path(panel) + '" class="tl-panel"/>' + panel.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="3" class="tl-panel-dot"/>').join('');
     g += '<path d="' + path(player) + '" class="tl-you"/>' + player.map((v, j) => '<circle cx="' + X(j) + '" cy="' + Y(v) + '" r="' + (j === n && !S.submitted ? 4.5 : 3.5) + '" class="tl-you-dot' + (j === n && !S.submitted ? ' live' : '') + '"/>').join('');
     svg.innerHTML = g;
   }
@@ -1312,14 +1659,22 @@ dialog.how form { text-align: right; margin-top: 12px; }
     return v >= 0 ? [255 * u + 20 * t, 255 * u + 60 * t, 255 * u + 150 * t] : [255 * u + 150 * t, 255 * u + 25 * t, 255 * u + 25 * t];
   }
   function sectionImage() {
-    const s = S.section, time = S.domain === 'time', key = S.cmap + S.gain + S.domain;
+    const s = S.section, time = S.domain === 'time', key = S.cmap + S.gain + S.domain + S.attr;
     if (S._imgKey === key) return S._off;
-    const nz = time ? s.nt : s.nz, arr = time ? s.timeData : s.data;
+    const nz = time ? s.nt : s.nz, A = GW.ATTRIBUTES[S.attr] || GW.ATTRIBUTES.amplitude;
+    const arr = GW.attribute(s, S.attr)[time ? 'time' : 'depth'];
     const off = document.createElement('canvas'); off.width = s.nx; off.height = nz;
     const ctx = off.getContext('2d'), id = ctx.createImageData(s.nx, nz);
+    const seq = (f) => { f = clamp(f, 0, 1) * (SEQ.length - 1); const i = Math.min(SEQ.length - 2, Math.floor(f)), u = f - i; return [0, 1, 2].map((q) => SEQ[i][q] * (1 - u) + SEQ[i + 1][q] * u); };
     for (let i = 0; i < s.nx; i++) for (let j = 0; j < nz; j++) {
-      const [r, g, b] = colorFor(arr[i * nz + j] * S.gain, S.cmap), q = (j * s.nx + i) * 4;
-      id.data[q] = r; id.data[q + 1] = g; id.data[q + 2] = b; id.data[q + 3] = 255;
+      const v = arr[i * nz + j];
+      let rgb;
+      if (A.kind === 'diverging') rgb = colorFor(v * S.gain, S.cmap);
+      else if (A.kind === 'classes') rgb = CLASS_COLORS[v % CLASS_COLORS.length];
+      else if (A.kind === 'coherence') { const g = 255 * clamp((v - A.min) / (A.max - A.min), 0, 1); rgb = [g, g, g]; }
+      else rgb = seq((v - A.min) / (A.max - A.min));
+      const q = (j * s.nx + i) * 4;
+      id.data[q] = rgb[0]; id.data[q + 1] = rgb[1]; id.data[q + 2] = rgb[2]; id.data[q + 3] = 255;
     }
     ctx.putImageData(id, 0, 0);
     S._off = off; S._imgKey = key;
@@ -1344,7 +1699,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
   }
 
   function drawSeis() {
-    if (!S.c) return;
+    if (!S.c || (!S.section && !S.img)) return;
     const cv = $('#seis'), W = cv.parentElement.clientWidth;
     const H = clamp(Math.round(W * (S.depth_m / S.width_m) * 0.85), 320, 640);
     const ctx = setupCanvas(cv, W, H);
@@ -1428,8 +1783,10 @@ dialog.how form { text-align: right; margin-top: 12px; }
 
     // circles for examined evidence that points at the section
     S.anchors = S.anchors || {};
+    Object.keys(S.anchors).forEach((k) => { if (S.anchors[k].el === 'seis') delete S.anchors[k]; });
     examinedItems().forEach((e) => {
       const w = e.where; if (!w || w.well || w.x_m == null) return;
+      if ((w.attribute || 'amplitude') !== S.attr && e.id !== S.selected) return;
       const cx = X(w.x_m), zc = w.z_m, rz = w.rz_m || 150;
       const y1 = Yz(w.x_m, zc - rz), y2 = Yz(w.x_m, zc + rz), cy = (y1 + y2) / 2, ry = Math.max(10, (y2 - y1) / 2);
       const rx = Math.max(12, ((w.rx_m || 300) / S.width_m) * pw);
@@ -1464,7 +1821,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
     return L.log ? (Math.log10(v) - Math.log10(L.min)) / (Math.log10(L.max) - Math.log10(L.min)) : (v - L.min) / (L.max - L.min);
   }
   function drawLogs() {
-    const c = S.c; if (!c || !c.wells || !c.wells.length) return;
+    const c = S.c; if (!c || !c.wells || !c.wells.length || !S.logs || !S.expertTops) return;
     const cv = $('#logs'), W = cv.parentElement.clientWidth;
     const H = clamp(S.seisGeom ? S.seisGeom.H + 40 : 520, 440, 700);
     const ctx = setupCanvas(cv, W, H);
@@ -1654,6 +2011,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
 
     $('#debriefBody').innerHTML =
       '<p class="stamp">Case ' + caseNumber(c) + ' · ' + esc(c.title) + '</p>' +
+      '<p class="standing">Suspects still standing at 10% or more: <b>' + c.candidates.filter((k) => P[k.id] >= 0.1).length + ' of ' + c.candidates.length + '</b> in your case, <b>' + c.candidates.filter((k) => E[k.id] >= 0.1).length + '</b> for the panel.</p>' +
       '<h4>Confidence</h4>' +
       (bayes ? '<p class="howto">Panel: the panel\u2019s distribution after the same ' + S.examined.length + ' note' + (S.examined.length === 1 ? '' : 's') + ' examined here. Panel, all evidence: after every evidence note, without leads.</p>' : '') +
       '<div class="cmp">' + rows + '</div>' +
@@ -1663,6 +2021,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
       (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
+      byLine() + mlTable() +
       narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
@@ -1677,6 +2036,22 @@ dialog.how form { text-align: right; margin-top: 12px; }
     S.session = S.session.filter((r) => r.id !== c.id);
     S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.examined.length, you: spread(P), panel: spread(E) });
     renderSession();
+  }
+
+  function byLine() {
+    if (!usesLikelihood()) return '';
+    const groups = LINES.map((l) => ({ l, items: allItems().filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
+    const row = (label, color, ids, note) => { const drop = Math.max(0, 1 - spread(posterior(ids))); return '<div class="line-row"><span class="line-name"><i style="background:' + color + '"></i>' + label + '</span><span class="track"><span class="fill" style="width:' + drop * 100 + '%;background:#9E1B22"></span></span><span class="val">' + Math.round(drop * 100) + '</span><span class="subnote">' + note + '</span></div>'; };
+    const rows = groups.map((g) => g.l.id === 'lead'
+      ? g.items.map((e) => row('Lead ' + noteNo(e.id) + ': ' + esc(e.label), g.l.color, [e.id], S.examined.includes(e.id) ? 'requested' : 'not requested')).join('')
+      : row(g.l.label, g.l.color, g.items.map((e) => e.id), g.items.length + ' clue' + (g.items.length === 1 ? '' : 's') + ', ' + g.items.filter((e) => S.examined.includes(e.id)).length + ' examined')).join('');
+    return '<h4>Narrowing by line of evidence</h4><p class="howto">Drop in the panel\u2019s spread of confidence, in percentage points, from each line of evidence on its own, starting from equal weights.</p><div class="lines-chart">' + rows + '</div>';
+  }
+  function mlTable() {
+    const ml = allItems().filter((e) => lineOf(e) === 'ml');
+    if (!ml.length || !usesLikelihood()) return '';
+    return '<h4>Machine learning results</h4><p class="howto">Confidence reported by each model beside how much its result narrows the panel\u2019s field. A model reports confidence in its own output, within what it was trained on; the narrowing depends on how well that output separates the suspects in this geologic setting.</p><div class="table-wrap"><table><thead><tr><th></th><th>Result</th><th>Reported by the model</th><th>Narrowing</th></tr></thead><tbody>' +
+      ml.map((e) => { const drop = Math.max(0, 1 - spread(posterior([e.id]))); return '<tr><td>' + noteNo(e.id) + '</td><td>' + esc(e.label) + (e.model ? '<div class="subnote">' + esc(e.model.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, k, l) => l || k)) + '</div>' : '') + '</td><td>' + (e.reportedConfidence != null ? pct(e.reportedConfidence) : 'none (unsupervised)') + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop * 400) + '%"></span></span> ' + Math.round(drop * 100) + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
 
   function biasCheck(E) {
@@ -1705,6 +2080,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
     }
     if (c.wells && c.wells.length) {
       const never = [...S.availLogs].filter((k) => !LOGS[k].combo && !S.viewed.has(k));
+      items.push('<li><strong>Seismic displays never shown:</strong> ' + (Object.keys(GW.ATTRIBUTES).filter((k) => !S.attrsSeen.has(k)).map((k) => GW.ATTRIBUTES[k].label).join(', ') || 'none') + '</li>');
       items.push('<li><strong>Log types never displayed:</strong> ' + (never.length ? never.map((k) => LOGS[k].label).join(', ') : 'none') + '</li>');
       let need = 0, made = 0;
       (c.tops || []).forEach((t) => c.wells.forEach((w) => { const e = S.expertTops[t.name][w.name]; if (e && !e.absent) { need++; if (S.picks[t.name][w.name] != null) made++; } }));
@@ -1751,7 +2127,13 @@ dialog.how form { text-align: right; margin-top: 12px; }
   function wire() {
     $('#tiers').addEventListener('click', (e) => { const b = e.target.closest('button[data-tier]'); if (!b) return; S.tier = b.dataset.tier; renderTiers(); });
     $('#caseList').addEventListener('click', (e) => { const b = e.target.closest('[data-case]'); if (b) loadCase(b.dataset.case); });
-    $('#cmap').addEventListener('change', (e) => { S.cmap = e.target.value; drawSeis(); });
+    $('#cmap').addEventListener('change', (e) => { S.cmap = e.target.value; renderLegend(); drawSeis(); });
+    $('#attr').addEventListener('change', (e) => setAttr(e.target.value));
+    $('#showPanel').addEventListener('change', (e) => { S.showPanel = e.target.checked; drawTimeline(); });
+    $('#cluePrev').addEventListener('click', () => stepClue(-1));
+    $('#clueNext').addEventListener('click', () => stepClue(1));
+    $('#railLines').addEventListener('click', (e) => { const b = e.target.closest('button[data-rail]'); if (b && !b.disabled) { examine(b.dataset.rail); focusClue(b.dataset.rail); } });
+    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
     $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); });
     $('#gain').addEventListener('input', (e) => { S.gain = Number(e.target.value); $('#gainOut').textContent = S.gain.toFixed(1) + '×'; drawSeis(); });
     $('#showWells').addEventListener('change', (e) => { S.showWells = e.target.checked; drawSeis(); });
@@ -1804,7 +2186,22 @@ dialog.how form { text-align: right; margin-top: 12px; }
     $('#retry').addEventListener('click', () => { loadCase(S.c.id); window.scrollTo({ top: 0 }); });
     $('#next').addEventListener('click', nextCase);
     $('#popCase').addEventListener('click', popCase);
-    $('#howBtn').addEventListener('click', () => $('#howDlg').showModal());
+    const dlg = $('#howDlg');
+    dlg.querySelectorAll('.brief-page p, .brief-page li').forEach((el) => (el.innerHTML = el.innerHTML.replace(/\[\[[^\]]+\]\]/g, (m) => rich(m.replace(/&amp;/g, '&')))));
+    const showPage = (k) => {
+      S.briefPage = k;
+      dlg.querySelectorAll('.brief-page').forEach((p) => (p.hidden = Number(p.dataset.page) !== k));
+      dlg.querySelectorAll('.brief-tabs button').forEach((b) => b.setAttribute('aria-selected', Number(b.dataset.page) === k));
+      dlg.querySelectorAll('.brief-dots i').forEach((d, i) => d.classList.toggle('on', i === k));
+      $('#briefBack').style.visibility = k ? 'visible' : 'hidden';
+      $('#briefNext').textContent = k < 2 ? 'Next' : (S.c && !S.everOpened ? 'Open the case' : 'Back to the board');
+    };
+    GW._showBrief = (k) => { showPage(k); if (!dlg.open) dlg.showModal(); };
+    dlg.querySelector('.brief-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-page]'); if (b) showPage(Number(b.dataset.page)); });
+    $('#briefBack').addEventListener('click', () => showPage(Math.max(0, S.briefPage - 1)));
+    $('#briefNext').addEventListener('click', () => { if (S.briefPage < 2) showPage(S.briefPage + 1); else { S.everOpened = true; dlg.close(); } });
+    $('#howBtn').addEventListener('click', () => GW._showBrief(2));
+    $('#briefBtn').addEventListener('click', () => GW._showBrief(0));
     $('#caseFile').addEventListener('change', (e) => {
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader();
@@ -1846,7 +2243,7 @@ dialog.how form { text-align: right; margin-top: 12px; }
     if (startId) loadCase(startId);
     let seen = false;
     try { seen = localStorage.getItem('geoDetectiveHowSeen') === '1'; localStorage.setItem('geoDetectiveHowSeen', '1'); } catch (e) { /* storage unavailable */ }
-    if (!seen && $('#howDlg').showModal) $('#howDlg').showModal();
+    if (!seen && $('#howDlg').showModal) GW._showBrief(0);
   };
 })();
 
@@ -2082,7 +2479,8 @@ GW.registerCase({
         "z_m": 1150,
         "rx_m": 520,
         "rz_m": 520
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "missing",
@@ -2096,7 +2494,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1180,
         "base_m": 1320
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "thickness",
@@ -2111,7 +2510,8 @@ GW.registerCase({
         "z_m": 1000,
         "rx_m": 1300,
         "rz_m": 350
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "oneline",
@@ -2120,7 +2520,8 @@ GW.registerCase({
         "normal": 0.5,
         "strikeslip": 0.8,
         "erosion": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "regionaldip",
@@ -2129,7 +2530,8 @@ GW.registerCase({
         "normal": 0.5,
         "strikeslip": 0.5,
         "erosion": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "shallow",
@@ -2144,6 +2546,72 @@ GW.registerCase({
         "z_m": 250,
         "rx_m": 450,
         "rz_m": 130
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "coh",
+      "line": "attributes",
+      "label": "Coherence: one narrow low-coherence line dips steeply east from about 550 m to the base of the line",
+      "likelihood": {
+        "normal": 0.75,
+        "strikeslip": 0.7,
+        "erosion": 0.25
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2350,
+        "z_m": 1150,
+        "rx_m": 600,
+        "rz_m": 600
+      }
+    },
+    {
+      "id": "spec45",
+      "line": "attributes",
+      "label": "Spectral decomposition, 45 Hz: Sand C is brighter west of the fault than east of it",
+      "detail": "East of the fault Sand C is about 150 m deeper.",
+      "likelihood": {
+        "normal": 0.5,
+        "strikeslip": 0.5,
+        "erosion": 0.55
+      },
+      "where": {
+        "attribute": "spec_high",
+        "x_m": 2000,
+        "z_m": 1300,
+        "rx_m": 1500,
+        "rz_m": 150
+      }
+    },
+    {
+      "id": "somorder",
+      "line": "ml",
+      "label": "SOM: classes repeat in the same vertical order on both sides of the discontinuity, stepped down to the east",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "normal": 0.7,
+        "strikeslip": 0.65,
+        "erosion": 0.3
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2300,
+        "z_m": 1200,
+        "rx_m": 900,
+        "rz_m": 500
+      }
+    },
+    {
+      "id": "faultnet",
+      "line": "ml",
+      "label": "Fault-detection network labels the discontinuity a normal fault",
+      "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse or strike-slip faults",
+      "reportedConfidence": 0.97,
+      "likelihood": {
+        "normal": 0.55,
+        "strikeslip": 0.5,
+        "erosion": 0.25
       }
     }
   ],
@@ -2152,7 +2620,7 @@ GW.registerCase({
     "confidence": 0.9,
     "basis": "For a real line with these data, a subsurface team would still lack strike control. A 3D survey or oriented core would be needed to exclude an oblique-slip component."
   },
-  "debrief": "Unit thicknesses that match across the fault indicate the fault moved after these beds were deposited. The missing Sand C in W2 is the borehole crossing the fault plane at about 1280 m.",
+  "debrief": "Unit thicknesses that match across the fault indicate the fault moved after these beds were deposited. The missing Sand C in W2 is the borehole crossing the fault plane at about 1280 m. The fault-detection network recognizes the discontinuity as a fault, which helps separate it from erosion, but it can only return the one fault type it was trained on, so its label and its 97% say nothing about normal versus strike-slip.",
   "leads": [
     {
       "id": "core",
@@ -2449,7 +2917,8 @@ GW.registerCase({
         "z_m": 1300,
         "rx_m": 500,
         "rz_m": 480
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "hwthick",
@@ -2464,7 +2933,8 @@ GW.registerCase({
         "z_m": 1300,
         "rx_m": 700,
         "rz_m": 450
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "isochore",
@@ -2478,7 +2948,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 500,
         "base_m": 1700
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "fwthick",
@@ -2493,7 +2964,8 @@ GW.registerCase({
         "z_m": 1100,
         "rx_m": 800,
         "rz_m": 400
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "lowrhob",
@@ -2507,7 +2979,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1075,
         "base_m": 1155
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "sonicspikes",
@@ -2521,7 +2994,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1075,
         "base_m": 1155
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "highgr",
@@ -2535,7 +3009,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 500,
         "base_m": 1850
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "deep",
@@ -2544,6 +3019,72 @@ GW.registerCase({
         "growth": 0.5,
         "wedge": 0.5,
         "withdrawal": 0.6
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "cohfade",
+      "line": "attributes",
+      "label": "Coherence: the fault is a clear low-coherence break below about 900 m and fades out upward",
+      "likelihood": {
+        "growth": 0.75,
+        "wedge": 0.45,
+        "withdrawal": 0.55
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2150,
+        "z_m": 900,
+        "rx_m": 380,
+        "rz_m": 480
+      }
+    },
+    {
+      "id": "spectune",
+      "line": "attributes",
+      "label": "Spectral decomposition: Sand 4 is brighter at 15 Hz east of the fault and brighter at 45 Hz west of it",
+      "detail": "East of the fault Sand 4 is about 250 m deeper.",
+      "likelihood": {
+        "growth": 0.5,
+        "wedge": 0.5,
+        "withdrawal": 0.5
+      },
+      "where": {
+        "attribute": "spec_low",
+        "x_m": 2000,
+        "z_m": 1550,
+        "rx_m": 1600,
+        "rz_m": 200
+      }
+    },
+    {
+      "id": "somclass",
+      "line": "ml",
+      "label": "SOM: the Lime Stringer and Sand 4 each keep their own class on both sides of the fault",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growth": 0.55,
+        "wedge": 0.55,
+        "withdrawal": 0.55
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 1250,
+        "rx_m": 1700,
+        "rz_m": 450
+      }
+    },
+    {
+      "id": "thicknet",
+      "line": "ml",
+      "label": "A thickness-prediction model predicts the Sand 1 to Sand 4 interval thickening steadily from W1 to W2",
+      "model": "Regression from seismic attributes to interval thickness, trained on W1 and W2 only",
+      "reportedConfidence": 0.99,
+      "likelihood": {
+        "growth": 0.45,
+        "wedge": 0.6,
+        "withdrawal": 0.5
       }
     }
   ],
@@ -2552,7 +3093,7 @@ GW.registerCase({
     "confidence": 0.82,
     "basis": "Both processes are present in the model. On real data, deeper imaging and a well nearer the fault would be needed to separate the fault-driven thickening from regional thickening and to rule out a mobile shale."
   },
-  "debrief": "The low bulk density and sonic spikes in W2 sit inside a shale on the gamma ray log, over the interval where the caliper shows an enlarged hole, so they are borehole effects rather than a sand. The high gamma ray in W1 is a calibration offset: the log shape correlates even though the values do not match W2.",
+  "debrief": "The low bulk density and sonic spikes in W2 sit inside a shale on the gamma ray log, over the interval where the caliper shows an enlarged hole, so they are borehole effects rather than a sand. The high gamma ray in W1 is a calibration offset: the log shape correlates even though the values do not match W2. The 15 Hz and 45 Hz brightness of Sand 4 changes across the fault because the eastern side is deeper and has lost more high frequency, not because Sand 4 changes thickness. The thickness model fits its two training wells almost perfectly, so its 99% reflects the fit at two points; between them it can only draw a smooth trend and has no way to place a fault-controlled change.",
   "leads": [
     {
       "id": "nearwell",
@@ -2875,7 +3416,8 @@ GW.registerCase({
         "z_m": 950,
         "rx_m": 1100,
         "rz_m": 280
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "crestunit",
@@ -2889,7 +3431,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1145,
         "base_m": 1215
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "grcorr",
@@ -2903,7 +3446,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1335,
         "base_m": 1400
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "rescorr",
@@ -2917,7 +3461,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1145,
         "base_m": 1215
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "dim",
@@ -2932,7 +3477,8 @@ GW.registerCase({
         "z_m": 1650,
         "rx_m": 650,
         "rz_m": 350
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "basemarker",
@@ -2946,7 +3492,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1405,
         "base_m": 1455
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "w3res",
@@ -2960,7 +3507,8 @@ GW.registerCase({
         "well": "W3",
         "top_m": 700,
         "base_m": 1900
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "deepevent",
@@ -2975,6 +3523,89 @@ GW.registerCase({
         "z_m": 1900,
         "rx_m": 900,
         "rz_m": 160
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "envcrest",
+      "line": "attributes",
+      "label": "Envelope: the crestal unit is as bright as the Upper and Base Markers and ends abruptly near 1.5 and 2.5 km",
+      "likelihood": {
+        "growthfold": 0.6,
+        "drape": 0.65,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "envelope",
+        "x_m": 2000,
+        "z_m": 1200,
+        "rx_m": 560,
+        "rz_m": 80
+      }
+    },
+    {
+      "id": "cohcrest",
+      "line": "attributes",
+      "label": "Coherence: no continuous vertical low-coherence zone crosses the crest; low values below 1250 m are scattered like the noise elsewhere",
+      "likelihood": {
+        "growthfold": 0.6,
+        "drape": 0.6,
+        "diapir": 0.4
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2000,
+        "z_m": 1100,
+        "rx_m": 450,
+        "rz_m": 550
+      }
+    },
+    {
+      "id": "somdepth",
+      "line": "ml",
+      "label": "SOM: classes change at about 750 m along the whole line",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.5,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 750,
+        "rx_m": 1900,
+        "rz_m": 120
+      }
+    },
+    {
+      "id": "somgroup",
+      "line": "ml",
+      "label": "SOM: the crestal unit falls in the same class as the Upper Marker and Base Marker",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.5,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 1200,
+        "rx_m": 560,
+        "rz_m": 80
+      }
+    },
+    {
+      "id": "reefnet",
+      "line": "ml",
+      "label": "A reef classifier labels the crestal unit a reef",
+      "model": "Supervised network trained on reef outlines from 3D surveys in another basin",
+      "reportedConfidence": 0.91,
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.55,
+        "diapir": 0.48
       }
     }
   ],
@@ -2983,7 +3614,7 @@ GW.registerCase({
     "confidence": 0.68,
     "basis": "With 2D data, poor sub-crest imaging and a disputed correlation, a real team could reasonably keep substantial weight on drape. Separating the two would need the Base Marker mapped in 3D under the crest and regional structural context."
   },
-  "debrief": "The Base Marker is deeper in W3 and W2 than in W1, so relief exists below the carbonate, which drape alone would not produce. That measurement rests on three wells with depth uncertainties of 6 to 15 m and relief of about 120 m, while the seismic below the crest cannot confirm it. The continuous event near 1900 m is a surface [[multiple]] of the Upper Marker at twice its two-way time, so its gentle arch repeats the shallow structure rather than recording deeper relief.",
+  "debrief": "The Base Marker is deeper in W3 and W2 than in W1, so relief exists below the carbonate, which drape alone would not produce. That measurement rests on three wells with depth uncertainties of 6 to 15 m and relief of about 120 m, while the seismic below the crest cannot confirm it. The continuous event near 1900 m is a surface [[multiple]] of the Upper Marker at twice its two-way time, so its gentle arch repeats the shallow structure rather than recording deeper relief. The SOM class change near 750 m follows the loss of high frequency with depth, and the SOM groups the crestal unit with the markers because all three are bright, continuous limestones; neither grouping separates the suspects. The reef classifier reports 91% for the pattern it was trained on, a bright mounded body, which a carbonate shoal on a growing fold also produces.",
   "leads": [
     {
       "id": "threed",
@@ -3192,7 +3823,8 @@ GW.registerCase({
         "z_m": 900,
         "rx_m": 480,
         "rz_m": 110
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "lowbelow",
@@ -3207,7 +3839,8 @@ GW.registerCase({
         "z_m": 1030,
         "rx_m": 380,
         "rz_m": 90
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "stacked",
@@ -3222,7 +3855,8 @@ GW.registerCase({
         "z_m": 800,
         "rx_m": 360,
         "rz_m": 80
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "size",
@@ -3237,7 +3871,8 @@ GW.registerCase({
         "z_m": 880,
         "rx_m": 650,
         "rz_m": 160
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "nowells",
@@ -3246,7 +3881,8 @@ GW.registerCase({
         "valley": 0.5,
         "submarine": 0.5,
         "collapse": 0.5
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "amplitude",
@@ -3261,7 +3897,8 @@ GW.registerCase({
         "z_m": 890,
         "rx_m": 300,
         "rz_m": 70
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "limestone",
@@ -3276,6 +3913,88 @@ GW.registerCase({
         "z_m": 1010,
         "rx_m": 400,
         "rz_m": 60
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "envfade",
+      "line": "attributes",
+      "label": "Envelope: the bright reflection at about 850 m fades out across the feature, and the fill itself is dim",
+      "likelihood": {
+        "valley": 0.6,
+        "submarine": 0.6,
+        "collapse": 0.4
+      },
+      "where": {
+        "attribute": "envelope",
+        "x_m": 1900,
+        "z_m": 880,
+        "rx_m": 560,
+        "rz_m": 90
+      }
+    },
+    {
+      "id": "cohlst",
+      "line": "attributes",
+      "label": "Coherence: the limestone reflection near 1000 m stays continuous beneath the feature",
+      "likelihood": {
+        "valley": 0.6,
+        "submarine": 0.6,
+        "collapse": 0.35
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2100,
+        "z_m": 1020,
+        "rx_m": 520,
+        "rz_m": 60
+      }
+    },
+    {
+      "id": "spechigh",
+      "line": "attributes",
+      "label": "Spectral decomposition, 45 Hz: the base of the feature shows as a faint concave-up line that is not resolved at 15 Hz",
+      "likelihood": {
+        "valley": 0.6,
+        "submarine": 0.6,
+        "collapse": 0.45
+      },
+      "where": {
+        "attribute": "spec_high",
+        "x_m": 1900,
+        "z_m": 930,
+        "rx_m": 520,
+        "rz_m": 80
+      }
+    },
+    {
+      "id": "somfill",
+      "line": "ml",
+      "label": "SOM: the fill falls in the same classes as the layered strata beside it",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "valley": 0.5,
+        "submarine": 0.5,
+        "collapse": 0.5
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 1900,
+        "z_m": 900,
+        "rx_m": 600,
+        "rz_m": 120
+      }
+    },
+    {
+      "id": "faultnet",
+      "line": "ml",
+      "label": "A fault-detection network marks both margins of the feature and the low beneath it as faults",
+      "model": "Supervised network trained on synthetic fault images",
+      "reportedConfidence": 0.88,
+      "likelihood": {
+        "valley": 0.5,
+        "submarine": 0.5,
+        "collapse": 0.55
       }
     }
   ],
@@ -3284,7 +4003,7 @@ GW.registerCase({
     "confidence": 0.5,
     "basis": "Seismic geometry separates an erosional cut from a collapse with moderate confidence. It does not separate a fluvial valley from a submarine channel; that needs lithology, fossils, or regional mapping of the surrounding sequence."
   },
-  "debrief": "The low in the limestone reflection is a velocity effect: the fill is slower than the strata it replaced, so the limestone arrives later in time, and the smoothed velocity model used for depth conversion does not fully remove the delay. Switching the display to two-way time shows the delay directly. Distinguishing erosion from collapse rests on the truncation at the base. Distinguishing a valley from a slope channel rests on information this line does not contain, so the panel spread its weight nearly evenly between those two.",
+  "debrief": "The low in the limestone reflection is a velocity effect: the fill is slower than the strata it replaced, so the limestone arrives later in time, and the smoothed velocity model used for depth conversion does not fully remove the delay. Switching the display to two-way time shows the delay directly. Distinguishing erosion from collapse rests on the truncation at the base. Distinguishing a valley from a slope channel rests on information this line does not contain, so the panel spread its weight nearly evenly between those two. The fault-detection network flags any abrupt lateral change in reflections, so channel margins and the velocity push-down look like faults to it; its 88% measures how fault-like the image pattern is, not whether a fault is present.",
   "leads": [
     {
       "id": "well",
@@ -3331,7 +4050,7 @@ GW.registerCase({
 
 </script>
   <script>/* cases/submitted */
-GW.registerCase({"id": "easy-02-twice-through", "title": "Twice through", "tier": "easy", "author": "Heather Bedle (example of a case submitted as a JSON file)", "summary": "Reflections step up to the east, and one well logs the same-looking sand twice.", "brief": "Reflections east of a moderately dipping surface sit higher than their counterparts to the west. W2 logs two sands of similar thickness and character where W1 logs one.", "seismic": {"type": "synthetic", "frequency_hz": 38, "phase_deg": 0, "Q": 180, "noise": 0.15, "multiples": 0.3, "diffractions": 0.3, "statics_ms": 2, "footprint": 0.03, "velocityError": 0.015, "seed": 111, "model": {"width_m": 4000, "depth_m": 2200, "dx_m": 12.5, "dz_m": 4, "dip_m_per_km": 20, "layers": [{"name": "Overburden", "lith": "shale", "thickness_m": 500, "lamination": 0.9}, {"name": "Sand A", "lith": "sand", "thickness_m": 60, "profile": "fining"}, {"name": "Shale 1", "lith": "shale", "thickness_m": 120}, {"name": "Ridge Limestone", "lith": "limestone", "thickness_m": 40}, {"name": "Shale 2", "lith": "silty_shale", "thickness_m": 150}, {"name": "Sand B", "lith": "sand", "thickness_m": 80, "profile": "coarsening"}, {"name": "Shale 3", "lith": "shale", "thickness_m": 200}, {"name": "Sand C", "lith": "tight_sand", "thickness_m": 70}, {"name": "Shale 4", "lith": "shale", "thickness_m": 400}, {"name": "Lower Limestone", "lith": "limestone", "thickness_m": 50}, {"name": "Basal shale", "lith": "silty_shale", "thickness_m": 1000}], "faults": [{"x_m": 1600, "dip_deg": 40, "dipDirection": 1, "throw_m": 110, "sense": "reverse", "tip_m": 380, "tipTaper_m": 120}]}, "velocitySmoothing_m": 25}, "wells": [{"name": "W1", "x_m": 900, "td_m": 1800, "depthUncertainty_m": 5, "note": "Modern wireline suite: gamma ray, caliper, resistivity, density, neutron, sonic."}, {"name": "W2", "x_m": 2684, "td_m": 1800, "depthUncertainty_m": 8, "note": "Vertical well. Cuttings descriptions report the same fine sandstone at both levels."}], "logWindow": {"top_m": 450, "base_m": 1750}, "tops": [{"name": "Ridge Limestone", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B, second", "expert": {"W1": {"absent": true}, "W2": {"depth": 924, "unc_m": 10, "note": "Footwall Sand B below the fault."}}}, {"name": "Sand C", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}], "candidates": [{"id": "reverse", "label": "Reverse fault", "description": "A [[reverse-fault]] with the [[hanging-wall]] up to the east, formed under horizontal shortening.", "pros": ["Reflections east of the fault are higher by a similar amount at every level.", "A borehole crossing a reverse fault logs part of the section twice, as W2 does for Sand B."], "cons": ["A single 2D line records only [[apparent-separation]]."], "sketch": "reverse-fault"}, {"id": "strikeslip", "label": "Strike-slip fault", "description": "A [[strike-slip]] fault whose horizontal motion appears as reverse separation on this line.", "pros": ["No strike information is available from one line."], "cons": ["Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."], "sketch": "strike-slip"}, {"id": "twosands", "label": "Two similar sands, no repetition", "description": "W2 penetrated two separate sand bodies with similar log character; the offset of reflections has another cause.", "pros": ["Sands of similar thickness and log shape are common in a cyclic succession."], "cons": ["W1 has only one sand at this level, 1.9 km away.", "The two W2 sands bracket the depth where the discontinuity crosses the well."], "sketch": "two-sands"}], "evidence": [{"id": "up", "label": "Reflections higher east of the discontinuity", "likelihood": {"reverse": 0.9, "strikeslip": 0.6, "twosands": 0.5}, "where": {"x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 500}}, {"id": "repeat", "label": "Two Sand B-like units in W2", "likelihood": {"reverse": 0.8, "strikeslip": 0.3, "twosands": 0.5}, "where": {"well": "W2", "top_m": 805, "base_m": 1010}}, {"id": "bracket", "label": "The two sands bracket the fault crossing in W2", "likelihood": {"reverse": 0.85, "strikeslip": 0.4, "twosands": 0.25}, "where": {"well": "W2", "top_m": 890, "base_m": 930}}, {"id": "cuttings", "label": "Cuttings descriptions identical at both levels", "likelihood": {"reverse": 0.6, "strikeslip": 0.5, "twosands": 0.5}}, {"id": "oneline", "label": "Only one 2D line", "likelihood": {"reverse": 0.5, "strikeslip": 0.7, "twosands": 0.5}}], "outcome": {"statement": "The section was built with a reverse fault of 110 m throw that W2 crosses at about 910 m.", "confidence": 0.9, "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."}, "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall.", "leads": [{"id": "dipmeter", "label": "Dipmeter across the fault in W2", "result": "Bed dips steepen sharply just above 910 m and return to regional dip below.", "likelihood": {"reverse": 0.8, "strikeslip": 0.4, "twosands": 0.2}}, {"id": "biostrat", "label": "Biostratigraphy of both sands", "result": "Both sands contain the same microfossil zone.", "likelihood": {"reverse": 0.9, "strikeslip": 0.3, "twosands": 0.15}}, {"id": "strikeline", "label": "Second 2D line along strike", "result": "The fault keeps the same up-to-east sense along strike.", "likelihood": {"reverse": 0.75, "strikeslip": 0.3, "twosands": 0.5}}]});
+GW.registerCase({"id": "easy-02-twice-through", "title": "Twice through", "tier": "easy", "author": "Heather Bedle (example of a case submitted as a JSON file)", "summary": "Reflections step up to the east, and one well logs the same-looking sand twice.", "brief": "Reflections east of a moderately dipping surface sit higher than their counterparts to the west. W2 logs two sands of similar thickness and character where W1 logs one.", "seismic": {"type": "synthetic", "frequency_hz": 38, "phase_deg": 0, "Q": 180, "noise": 0.15, "multiples": 0.3, "diffractions": 0.3, "statics_ms": 2, "footprint": 0.03, "velocityError": 0.015, "seed": 111, "model": {"width_m": 4000, "depth_m": 2200, "dx_m": 12.5, "dz_m": 4, "dip_m_per_km": 20, "layers": [{"name": "Overburden", "lith": "shale", "thickness_m": 500, "lamination": 0.9}, {"name": "Sand A", "lith": "sand", "thickness_m": 60, "profile": "fining"}, {"name": "Shale 1", "lith": "shale", "thickness_m": 120}, {"name": "Ridge Limestone", "lith": "limestone", "thickness_m": 40}, {"name": "Shale 2", "lith": "silty_shale", "thickness_m": 150}, {"name": "Sand B", "lith": "sand", "thickness_m": 80, "profile": "coarsening"}, {"name": "Shale 3", "lith": "shale", "thickness_m": 200}, {"name": "Sand C", "lith": "tight_sand", "thickness_m": 70}, {"name": "Shale 4", "lith": "shale", "thickness_m": 400}, {"name": "Lower Limestone", "lith": "limestone", "thickness_m": 50}, {"name": "Basal shale", "lith": "silty_shale", "thickness_m": 1000}], "faults": [{"x_m": 1600, "dip_deg": 40, "dipDirection": 1, "throw_m": 110, "sense": "reverse", "tip_m": 380, "tipTaper_m": 120}]}, "velocitySmoothing_m": 25}, "wells": [{"name": "W1", "x_m": 900, "td_m": 1800, "depthUncertainty_m": 5, "note": "Modern wireline suite: gamma ray, caliper, resistivity, density, neutron, sonic."}, {"name": "W2", "x_m": 2684, "td_m": 1800, "depthUncertainty_m": 8, "note": "Vertical well. Cuttings descriptions report the same fine sandstone at both levels."}], "logWindow": {"top_m": 450, "base_m": 1750}, "tops": [{"name": "Ridge Limestone", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B, second", "expert": {"W1": {"absent": true}, "W2": {"depth": 924, "unc_m": 10, "note": "Footwall Sand B below the fault."}}}, {"name": "Sand C", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}], "candidates": [{"id": "reverse", "label": "Reverse fault", "description": "A [[reverse-fault]] with the [[hanging-wall]] up to the east, formed under horizontal shortening.", "pros": ["Reflections east of the fault are higher by a similar amount at every level.", "A borehole crossing a reverse fault logs part of the section twice, as W2 does for Sand B."], "cons": ["A single 2D line records only [[apparent-separation]]."], "sketch": "reverse-fault"}, {"id": "strikeslip", "label": "Strike-slip fault", "description": "A [[strike-slip]] fault whose horizontal motion appears as reverse separation on this line.", "pros": ["No strike information is available from one line."], "cons": ["Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."], "sketch": "strike-slip"}, {"id": "twosands", "label": "Two similar sands, no repetition", "description": "W2 penetrated two separate sand bodies with similar log character; the offset of reflections has another cause.", "pros": ["Sands of similar thickness and log shape are common in a cyclic succession."], "cons": ["W1 has only one sand at this level, 1.9 km away.", "The two W2 sands bracket the depth where the discontinuity crosses the well."], "sketch": "two-sands"}], "evidence": [{"id": "up", "label": "Reflections higher east of the discontinuity", "likelihood": {"reverse": 0.9, "strikeslip": 0.6, "twosands": 0.5}, "where": {"x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 500}, "line": "seismic"}, {"id": "repeat", "label": "Two Sand B-like units in W2", "likelihood": {"reverse": 0.8, "strikeslip": 0.3, "twosands": 0.5}, "where": {"well": "W2", "top_m": 805, "base_m": 1010}, "line": "logs"}, {"id": "bracket", "label": "The two sands bracket the fault crossing in W2", "likelihood": {"reverse": 0.85, "strikeslip": 0.4, "twosands": 0.25}, "where": {"well": "W2", "top_m": 890, "base_m": 930}, "line": "logs"}, {"id": "cuttings", "label": "Cuttings descriptions identical at both levels", "likelihood": {"reverse": 0.6, "strikeslip": 0.5, "twosands": 0.5}, "line": "seismic"}, {"id": "oneline", "label": "Only one 2D line", "likelihood": {"reverse": 0.5, "strikeslip": 0.7, "twosands": 0.5}, "line": "seismic"}, {"id": "coh", "line": "attributes", "label": "Coherence: one narrow low-coherence line dips east through the step", "likelihood": {"reverse": 0.75, "strikeslip": 0.7, "twosands": 0.35}, "where": {"attribute": "coherence", "x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 520}}, {"id": "faultnet", "line": "ml", "label": "Fault-detection network labels the discontinuity a normal fault", "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse faults", "reportedConfidence": 0.95, "likelihood": {"reverse": 0.55, "strikeslip": 0.5, "twosands": 0.2}}], "outcome": {"statement": "The section was built with a reverse fault of 110 m throw that W2 crosses at about 910 m.", "confidence": 0.9, "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."}, "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall. The fault-detection network finds the fault, which argues against two unrelated sands, but it labels every fault normal because that is the only type in its training set.", "leads": [{"id": "dipmeter", "label": "Dipmeter across the fault in W2", "result": "Bed dips steepen sharply just above 910 m and return to regional dip below.", "likelihood": {"reverse": 0.8, "strikeslip": 0.4, "twosands": 0.2}}, {"id": "biostrat", "label": "Biostratigraphy of both sands", "result": "Both sands contain the same microfossil zone.", "likelihood": {"reverse": 0.9, "strikeslip": 0.3, "twosands": 0.15}}, {"id": "strikeline", "label": "Second 2D line along strike", "result": "The fault keeps the same up-to-east sense along strike.", "likelihood": {"reverse": 0.75, "strikeslip": 0.3, "twosands": 0.5}}]});
 </script>
   <script>GW.start();</script>
 </body>

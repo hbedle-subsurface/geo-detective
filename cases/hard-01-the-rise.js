@@ -274,7 +274,8 @@ GW.registerCase({
         "z_m": 950,
         "rx_m": 1100,
         "rz_m": 280
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "crestunit",
@@ -288,7 +289,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1145,
         "base_m": 1215
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "grcorr",
@@ -302,7 +304,8 @@ GW.registerCase({
         "well": "W2",
         "top_m": 1335,
         "base_m": 1400
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "rescorr",
@@ -316,7 +319,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1145,
         "base_m": 1215
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "dim",
@@ -331,7 +335,8 @@ GW.registerCase({
         "z_m": 1650,
         "rx_m": 650,
         "rz_m": 350
-      }
+      },
+      "line": "seismic"
     },
     {
       "id": "basemarker",
@@ -345,7 +350,8 @@ GW.registerCase({
         "well": "W1",
         "top_m": 1405,
         "base_m": 1455
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "w3res",
@@ -359,7 +365,8 @@ GW.registerCase({
         "well": "W3",
         "top_m": 700,
         "base_m": 1900
-      }
+      },
+      "line": "logs"
     },
     {
       "id": "deepevent",
@@ -374,6 +381,89 @@ GW.registerCase({
         "z_m": 1900,
         "rx_m": 900,
         "rz_m": 160
+      },
+      "line": "seismic"
+    },
+    {
+      "id": "envcrest",
+      "line": "attributes",
+      "label": "Envelope: the crestal unit is as bright as the Upper and Base Markers and ends abruptly near 1.5 and 2.5 km",
+      "likelihood": {
+        "growthfold": 0.6,
+        "drape": 0.65,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "envelope",
+        "x_m": 2000,
+        "z_m": 1200,
+        "rx_m": 560,
+        "rz_m": 80
+      }
+    },
+    {
+      "id": "cohcrest",
+      "line": "attributes",
+      "label": "Coherence: no continuous vertical low-coherence zone crosses the crest; low values below 1250 m are scattered like the noise elsewhere",
+      "likelihood": {
+        "growthfold": 0.6,
+        "drape": 0.6,
+        "diapir": 0.4
+      },
+      "where": {
+        "attribute": "coherence",
+        "x_m": 2000,
+        "z_m": 1100,
+        "rx_m": 450,
+        "rz_m": 550
+      }
+    },
+    {
+      "id": "somdepth",
+      "line": "ml",
+      "label": "SOM: classes change at about 750 m along the whole line",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.5,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 750,
+        "rx_m": 1900,
+        "rz_m": 120
+      }
+    },
+    {
+      "id": "somgroup",
+      "line": "ml",
+      "label": "SOM: the crestal unit falls in the same class as the Upper Marker and Base Marker",
+      "model": "Self-organizing map, 8 classes, unsupervised, from four attributes",
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.5,
+        "diapir": 0.5
+      },
+      "where": {
+        "attribute": "som",
+        "x_m": 2000,
+        "z_m": 1200,
+        "rx_m": 560,
+        "rz_m": 80
+      }
+    },
+    {
+      "id": "reefnet",
+      "line": "ml",
+      "label": "A reef classifier labels the crestal unit a reef",
+      "model": "Supervised network trained on reef outlines from 3D surveys in another basin",
+      "reportedConfidence": 0.91,
+      "likelihood": {
+        "growthfold": 0.5,
+        "drape": 0.55,
+        "diapir": 0.48
       }
     }
   ],
@@ -382,7 +472,7 @@ GW.registerCase({
     "confidence": 0.68,
     "basis": "With 2D data, poor sub-crest imaging and a disputed correlation, a real team could reasonably keep substantial weight on drape. Separating the two would need the Base Marker mapped in 3D under the crest and regional structural context."
   },
-  "debrief": "The Base Marker is deeper in W3 and W2 than in W1, so relief exists below the carbonate, which drape alone would not produce. That measurement rests on three wells with depth uncertainties of 6 to 15 m and relief of about 120 m, while the seismic below the crest cannot confirm it. The continuous event near 1900 m is a surface [[multiple]] of the Upper Marker at twice its two-way time, so its gentle arch repeats the shallow structure rather than recording deeper relief.",
+  "debrief": "The Base Marker is deeper in W3 and W2 than in W1, so relief exists below the carbonate, which drape alone would not produce. That measurement rests on three wells with depth uncertainties of 6 to 15 m and relief of about 120 m, while the seismic below the crest cannot confirm it. The continuous event near 1900 m is a surface [[multiple]] of the Upper Marker at twice its two-way time, so its gentle arch repeats the shallow structure rather than recording deeper relief. The SOM class change near 750 m follows the loss of high frequency with depth, and the SOM groups the crestal unit with the markers because all three are bright, continuous limestones; neither grouping separates the suspects. The reef classifier reports 91% for the pattern it was trained on, a bright mounded body, which a carbonate shoal on a growing fold also produces.",
   "leads": [
     {
       "id": "threed",
