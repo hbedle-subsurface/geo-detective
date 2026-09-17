@@ -27,6 +27,7 @@
   </header>
 
   <nav class="drawer" aria-label="Case files">
+    <p class="drawer-title">Case files by case tier</p>
     <div id="tiers" class="tiers" role="tablist"></div>
     <p id="tierBlurb" class="tier-blurb"></p>
     <div id="caseList" class="case-list"></div>
@@ -45,7 +46,8 @@
         <button type="button" id="clueNext" class="btn primary">Next clue ▶</button>
       </div>
     </div>
-    <div id="board" class="board">
+    <div id="board" class="board" aria-label="Detective board">
+      <p class="board-plaque">Detective board</p>
       <svg id="strings" class="strings" aria-hidden="true"></svg>
 
       <section class="card casefile" id="caseCard">
@@ -76,14 +78,15 @@
       <section class="card suspects-card" id="suspectsCard">
         <span class="pin"></span>
         <p class="typed-label"><span class="num">2</span>Suspects</p>
-        <p class="howto">Share your confidence among the suspects with the sliders; the shares add to 100%. Dossiers hold each suspect's case.</p>
+        <p class="howto">With a clue selected, click a suspect card to string them. Click again to string it against; a third click, or a click on the string, removes it. Sliders share your confidence; the shares add to 100%.</p>
+        <p id="linkStatus" class="link-status" role="status" aria-live="polite"></p>
         <div id="suspects" class="suspects"></div>
         <div class="spread"><span>Spread of confidence</span><span class="track"><span id="spreadFill" class="fill"></span></span><strong id="spreadVal"></strong></div>
       </section>
 
       <section class="card evidence-card" id="evidenceCard">
         <span class="pin"></span>
-        <p class="typed-label"><span class="num">1</span>Evidence</p>
+        <p class="typed-label"><span class="num">1</span>Clues</p>
         <div id="notes" class="notes"></div>
         <div id="noteDetail" class="note-detail"></div>
       </section>
@@ -121,21 +124,21 @@
         <section class="card timeline-card" id="timelineCard">
           <span class="pin"></span>
           <p class="typed-label">Uncertainty timeline</p>
-          <svg id="timeline" class="timeline" role="img" aria-label="Spread of confidence after each note examined"></svg>
+          <svg id="timeline" class="timeline" role="img" aria-label="Spread of confidence after each clue examined"></svg>
           <p class="tl-key"><span class="k you"></span>Your spread of confidence (%)</p>
           <label class="check small-check"><input type="checkbox" id="showPanel"> Show the panel's spread <span class="k panel"></span></label>
         </section>
       </div>
 
       <section class="card close-card" id="closeCard">
-        <p class="typed-label"><span class="num">4</span>Close the case</p>
+        <p class="typed-label"><span class="num">4</span>Submit the case</p>
         <div id="justifyWrap" hidden>
           <label for="justify" class="howto">This case has no wells, so a few sentences on the seismic observations behind the distribution are required.</label>
           <textarea id="justify" rows="3" placeholder="Observations behind this distribution"></textarea>
         </div>
         <div class="close-row">
-          <p class="howto">Closing locks the sliders, strings and picks, and opens the case report.</p>
-          <button type="button" id="submit" class="btn primary">Close the case</button>
+          <p class="howto">Submitting locks the sliders, strings and picks, and opens the case report.</p>
+          <button type="button" id="submit" class="btn primary">Submit the case</button>
         </div>
         <p id="submitMsg" class="msg" role="status"></p>
       </section>
@@ -144,6 +147,8 @@
     <section id="debrief" class="report" hidden>
       <h3>Case report</h3>
       <div id="debriefBody"></div>
+      <label class="check bias-toggle"><input type="checkbox" id="panelBoard"> Show the panel's strings on the detective board</label>
+      <p class="howto">Teal strings are the panel's reading of each clue found: solid where a clue favors a suspect, dashed where it argues against one. Thin teal strings match a string on your board; thick ones are strings your board does not have.</p>
       <label class="check bias-toggle"><input type="checkbox" id="biasToggle"> Show evidence check</label>
       <div id="bias" class="bias" hidden></div>
       <div class="debrief-actions">
@@ -156,7 +161,7 @@
   <section id="session" class="session" hidden>
     <h3>This session</h3>
     <div class="table-wrap"><table>
-      <thead><tr><th>Case</th><th>Tier</th><th>Notes examined</th><th>Overlap with panel</th><th>Spread (you / panel)</th></tr></thead>
+      <thead><tr><th>Case</th><th>Tier</th><th>Clues</th><th>Overlap with panel</th><th>Spread (you / panel)</th></tr></thead>
       <tbody id="sessionBody"></tbody>
     </table></div>
   </section>
@@ -192,10 +197,10 @@
       <p class="typed-label">How to play</p>
       <h2>Working a case</h2>
       <ol class="how-steps">
-        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. In <b>Discovery</b> mode most clues start hidden and turn up through investigation: clicking something unusual on the section or in a well, switching displays and logs, picking and flattening tops, and running models on the model bench. <b>Hint</b> points toward a clue not yet found. In <b>Lecture walk-through</b> mode every clue is on the board, and <b>Next clue</b> or the arrow keys step through them in order. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
-        <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
+        <li><b>Clues.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. In <b>Discovery</b> mode most clues start hidden and turn up through investigation: clicking something unusual on the section or in a well, switching displays and logs, picking and flattening tops, and running models on the model bench. <b>Hint</b> points toward a clue not yet found. In <b>Lecture walk-through</b> mode every clue is on the board, and <b>Next clue</b> or the arrow keys step through them in order. Each one is circled on the seismic line or well logs, and can be strung to suspects on the detective board: select the clue, then click the suspect card. Tops can be picked and correlated on the logs.</li>
+        <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each clue.</li>
         <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
-        <li><b>Close the case.</b> The case report compares your distribution with the panel after the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
+        <li><b>Submit the case.</b> The case report compares your distribution with the panel after the same clues, shows how much each clue and lead narrows the field, can overlay the panel's strings on the detective board, and states what is known and with what confidence.</li>
       </ol>
       <p class="small">Underlined words open a short definition.</p>
     </section>

@@ -170,7 +170,7 @@ Display scales are fixed: gamma ray 0–150 API, caliper 6–16 in, resistivity 
 
 Every case has at least two candidates, including at the easy tier. They appear on the board as suspects with a small line sketch. `sketch` is one of `normal-fault`, `reverse-fault`, `growth-fault`, `wedge`, `strike-slip`, `erosion`, `withdrawal`, `fold`, `drape`, `diapir`, `valley`, `channel-stack`, `collapse`, `two-sands`; any other value shows a question mark. `description`, `pros` and `cons` fill the suspect's dossier.
 
-## `evidence` (sticky notes)
+## `evidence` (clue cards)
 
 ```json
 {
@@ -182,7 +182,7 @@ Every case has at least two candidates, including at the easy tier. They appear 
 }
 ```
 
-- `line` is the line of evidence the note belongs to: `seismic`, `logs`, `attributes` or `ml`. Notes are grouped and numbered by line, and **Next clue** steps through them in that order. Without `line`, notes with a well `where` are `logs` and all others `seismic`.
+- `line` is the line of evidence the note belongs to: `seismic`, `logs`, `attributes` or `ml`. Clues are grouped and numbered by line, and **Next clue** steps through them in that order. Without `line`, notes with a well `where` are `logs` and all others `seismic`.
 - `label` is the observation written on the note.
 - `likelihood` gives, for each candidate, how probable this observation would be if that candidate were correct, on a 0–1 scale. Only the ratios between candidates matter: equal values (0.5, 0.5, 0.5) mean the note is consistent with every suspect and does not narrow the field. A missing value counts as 0.5.
 - `where` circles the observation on an exhibit, and a red string runs from the note to the circle. `{ "x_m", "z_m", "rx_m", "rz_m" }` circles a region of the seismic line (centre and half-widths in metres, drawn correctly in both depth and time displays). `{ "well", "top_m", "base_m" }` circles a log interval. Add `"attribute"` to a seismic `where` (`envelope`, `coherence`, `dip`, `spec_low`, `spec_high` or `som`) to switch Exhibit A to that display when the note is examined. Omit `where` for observations that are not a place on the data.
@@ -202,7 +202,7 @@ Exhibit A can show the amplitude section or attributes computed in the browser f
 
 Attribute and SOM results are computed, not written by hand, so clues about them should be checked against the displays. In these synthetic sections the SOM classes change with depth along every line because attenuation removes high frequencies, and the 15 Hz and 45 Hz components shift across faults for the same reason.
 
-The panel distribution is computed from the likelihoods by Bayes' rule, starting from equal weights. After a case is closed, the player is compared with the panel's distribution after the same notes and leads the player examined, and with the panel's distribution after all evidence notes. Run `node tools/check_cases.js` to print the panel distribution after all evidence and the effect of each lead, and adjust the likelihoods until those match the distribution the interpreters behind the case would give.
+The panel distribution is computed from the likelihoods by Bayes' rule, starting from equal weights. After a case is closed, the player is compared with the panel's distribution after the same clues and leads the player examined, and with the panel's distribution after all evidence notes. Run `node tools/check_cases.js` to print the panel distribution after all evidence and the effect of each lead, and adjust the likelihoods until those match the distribution the interpreters behind the case would give.
 
 Cases written before likelihoods were added can still supply `expertConsensus` (`{ candidateId: weight }`) and no likelihoods; the board then compares against that fixed distribution and the timeline shows no panel line.
 
@@ -251,7 +251,7 @@ The case report lists clues not found, where each was, and how much each narrows
 ]
 ```
 
-Leads are listed on the chalkboard. The player can request up to `maxLeads` of them (default 2); each request adds a pink note with the `result`. Leads use the same `likelihood` and optional `where` fields as evidence. The case report lists every lead with how much it narrows the panel's spread of confidence, including leads that were not requested, so different kinds of additional data can be compared. A lead with equal likelihoods (for example pressure data that cannot separate the suspects) narrows nothing.
+Leads are listed on the chalkboard. The player can request up to `maxLeads` of them (default 2); each request adds a pink clue card with the `result`. Leads use the same `likelihood` and optional `where` fields as evidence. The case report lists every lead with how much it narrows the panel's spread of confidence, including leads that were not requested, so different kinds of additional data can be compared. A lead with equal likelihoods (for example pressure data that cannot separate the suspects) narrows nothing.
 
 ## `outcome`
 
@@ -265,8 +265,8 @@ Leads are listed on the chalkboard. The player can request up to `maxLeads` of t
 
 - **Overlap with panel**: Σ min(player, panel) across candidates, using the panel distribution after the notes the player examined. 100% for identical distributions.
 - **Spread of confidence**: 1 − TV / (1 − 1/n), where TV = ½ Σ |p − 1/n| is the total variation distance from equal weights. 100% when weight is shared equally, 0% when all weight is on one candidate.
-- **Uncertainty timeline**: the player's spread before each note was examined and at closing, beside the panel's spread after the same sequence of notes.
-- **Narrowing**: for each note and lead, the drop in the panel's spread from that item alone, starting from equal weights.
+- **Uncertainty timeline**: the player's spread before each clue was examined and at submitting, beside the panel's spread after the same sequence of clues.
+- **Narrowing**: for each clue and lead, the drop in the panel's spread from that item alone, starting from equal weights.
 - **Narrowing by line of evidence**: the same drop for all notes of one line together (seismic, well logs, attributes, machine learning), and for each lead.
 - **Machine learning results**: each `ml` note's `reportedConfidence` beside its narrowing.
 - **Largest weight**: the player's and the panel's most heavily weighted candidate.

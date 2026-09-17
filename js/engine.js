@@ -180,7 +180,7 @@
     Object.assign(S, {
       expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null, found: new Set(), foundHow: {}, hints: 0, hinted: new Set(), looks: 0,
+      links: {}, examined: [], snaps: [], selected: null, armed: null, showPanelBoard: false, anchors: {}, logs: null, expertTops: null, found: new Set(), foundHow: {}, hints: 0, hinted: new Set(), looks: 0,
       picks: {}, submitted: false, flatten: '', logType: 'GR',
       viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', attr: 'amplitude', attrsSeen: new Set(['amplitude']), showPanel: false, gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
@@ -223,7 +223,7 @@
   function renderCase() {
     const c = S.c;
     $('#caseNo').textContent = 'Case ' + caseNumber(c);
-    $('#caseTier').textContent = (GW.tiers.find((t) => t.id === c.tier) || { label: c.tier }).label;
+    $('#caseTier').textContent = (GW.tiers.find((t) => t.id === c.tier) || { label: c.tier }).label + ' case tier';
     $('#caseTitle').textContent = c.title || c.id;
     $('#caseBrief').innerHTML = rich(c.brief || '');
     const hasWells = c.wells && c.wells.length;
@@ -253,6 +253,7 @@
     $('#showPanel').checked = S.showPanel;
     renderLegend();
     renderSuspects();
+    document.body.classList.remove('linking');
     if (S.mode === 'discovery') orderedEvidence().forEach((e) => { if (triggersOf(e).some((t) => t.type === 'given')) { S.found.add(e.id); S.foundHow[e.id] = 'In the case file'; if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); } } });
     renderModels();
     renderRail();
@@ -310,7 +311,7 @@
       if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
       const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
       const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
-      html += '<button type="button" class="note' + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i++ * 37) % 7) - 3) * 0.6 + 'deg;--line:' + lineInfo(ln).color + '">' +
+      html += '<button type="button" class="note' + (seen ? ' seen' : '') + (S.selected === e.id ? ' selected' : '') + (S.armed === e.id ? ' armed' : '') + (S.justFound && S.justFound.includes(e.id) ? ' flip' : '') + '" data-note="' + esc(e.id) + '" style="--tilt:' + (((i++ * 37) % 7) - 3) * 0.6 + 'deg;--line:' + lineInfo(ln).color + '">' +
         '<span class="pin"></span><span class="note-no">' + noteNo(e.id) + (seen ? '' : ' · unexamined') + '</span>' +
         '<span class="note-text">' + (seen ? rich(e.label) : esc(e.label)) + '</span>' +
         (tags ? '<span class="tags">' + tags + '</span>' : '') + '</button>';
@@ -391,7 +392,8 @@
       if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); }
     });
     if (hits.length) {
-      S.selected = hits[hits.length - 1].e.id;
+      S.selected = hits[hits.length - 1].e.id; S.justFound = hits.map((h) => h.e.id); S.armed = S.selected; document.body.classList.add('linking');
+      clearTimeout(S._flipT); S._flipT = setTimeout(() => { S.justFound = null; }, 900);
       toast(hits.map(({ e }) => '<span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + noteNo(e.id) + '</span> ' + esc(e.label)).join('<br>'), 'New clue' + (hits.length > 1 ? 's' : '') + ' found');
       renderNotes(); renderNoteDetail(); renderRail(); renderModels();
       drawTimeline(); requestAnimationFrame(() => { drawSeis(); drawLogs(); drawStrings(); });
@@ -468,7 +470,7 @@
 
   function renderNoteDetail() {
     const box = $('#noteDetail'), e = S.selected && itemById(S.selected);
-    if (!e) { box.innerHTML = '<p class="howto">Select a note to examine it. Notes that point at the data are circled on the exhibits.</p>'; return; }
+    if (!e) { box.innerHTML = '<p class="howto">Select a clue to examine it. Clues that point at the data are circled on the exhibits.</p>'; return; }
     const links = S.links[e.id] || {};
     const where = e.where ? (e.where.well ? 'Circled on Exhibit B, well ' + esc(e.where.well) + '.' : 'Circled on Exhibit A' + (e.where.attribute ? ', ' + GW.ATTRIBUTES[e.where.attribute].label.toLowerCase() + ' display.' : '.')) : '';
     const ln = lineInfo(lineOf(e));
@@ -477,19 +479,42 @@
     const how = S.mode === 'discovery' && S.foundHow[e.id] ? '<p class="found-how">Found: ' + esc(S.foundHow[e.id]) + '</p>' : '';
     box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + how + model +
       (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
-      '<p class="howto">String this note to the suspects it bears on:</p>' +
+      '<p class="howto">Strings to suspects (click a suspect card to add; also set here):</p>' +
       '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
         const v = links[k.id] || '';
         return '<div class="linkrow"><span class="lk-name"><b>' + String.fromCharCode(65 + ci) + '</b> ' + esc(k.label) + '</span><span class="seg small" role="group" aria-label="' + esc(k.label) + '">' +
           ['for', '', 'against'].map((d) => '<button type="button" data-link="' + d + '" data-cand="' + esc(k.id) + '" aria-pressed="' + (v === d) + '">' + (d === 'for' ? 'Supports' : d === 'against' ? 'Against' : '—') + '</button>').join('') + '</span></div>';
       }).join('') + '</div>';
   }
+  /* ---------- click-to-link strings ---------- */
+  const DIR_NEXT = { undefined: 'for', for: 'against', against: undefined };
+  function armClue(id) {
+    S.armed = S.submitted ? null : id;
+    document.body.classList.toggle('linking', !!S.armed);
+    document.querySelectorAll('.suspect').forEach((el) => el.classList.toggle('target', !!S.armed));
+  }
+  function linkTo(cand) {
+    const id = S.armed; if (!id || S.submitted) return;
+    S.links[id] = S.links[id] || {};
+    const next = DIR_NEXT[S.links[id][cand]];
+    if (next) S.links[id][cand] = next; else delete S.links[id][cand];
+    S.newLink = next ? id + '|' + cand : null;
+    renderNotes(); renderNoteDetail(); drawStrings();
+    const k = S.c.candidates.find((q) => q.id === cand);
+    $('#linkStatus').textContent = next ? noteNo(id) + (next === 'for' ? ' strung in support of ' : ' strung against ') + k.label + '.' : 'String from ' + noteNo(id) + ' to ' + k.label + ' removed.';
+  }
+  function removeLink(id, cand) {
+    if (S.submitted || !S.links[id]) return;
+    delete S.links[id][cand];
+    renderNotes(); renderNoteDetail(); drawStrings();
+  }
+
   function examine(id) {
     if (!S.submitted && !S.examined.includes(id)) {
       S.snaps.push(shares());
       S.examined.push(id);
     }
-    S.selected = id;
+    S.selected = id; armClue(id);
     const it = itemById(id);
     if (it && it.where && it.where.attribute && S.section) setAttr(it.where.attribute);
     else if (it && it.where && it.where.x_m != null && S.attr !== 'amplitude' && !(it.where.attribute)) setAttr('amplitude');
@@ -563,14 +588,17 @@
     svg.setAttribute('width', br.width); svg.setAttribute('height', br.height);
     svg.setAttribute('viewBox', '0 0 ' + br.width + ' ' + br.height);
     const center = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2 - br.left, y: r.top + r.height / 2 - br.top }; };
-    let out = '';
-    const line = (a, b, cls) => {
-      const sag = Math.min(40, Math.hypot(b.x - a.x, b.y - a.y) * 0.08);
-      out += '<path d="M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + ((a.x + b.x) / 2).toFixed(1) + ' ' + ((a.y + b.y) / 2 + sag).toFixed(1) + ' ' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + '" class="' + cls + '"/>';
-      out += '<circle cx="' + b.x.toFixed(1) + '" cy="' + b.y.toFixed(1) + '" r="3.5" class="tack"/>';
+    let out = '', hits = '';
+    const pathD = (a, b, sagK, off) => { const sag = Math.min(40, Math.hypot(b.x - a.x, b.y - a.y) * sagK); return 'M' + (a.x + off).toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + ((a.x + b.x) / 2 + off).toFixed(1) + ' ' + ((a.y + b.y) / 2 + sag).toFixed(1) + ' ' + (b.x + off).toFixed(1) + ' ' + b.y.toFixed(1); };
+    const line = (a, b, cls, extra, off) => {
+      const d = pathD(a, b, 0.08, off || 0);
+      out += '<path d="' + d + '" class="' + cls + '"' + (extra || '') + '/>';
+      out += '<circle cx="' + (b.x + (off || 0)).toFixed(1) + '" cy="' + b.y.toFixed(1) + '" r="3.5" class="tack"/>';
+      return d;
     };
+    const visible = (id) => document.querySelector('.note[data-note="' + CSS.escape(id) + '"] .pin');
     S.examined.forEach((id) => {
-      const note = document.querySelector('.note[data-note="' + CSS.escape(id) + '"] .pin'); if (!note) return;
+      const note = visible(id); if (!note) return;
       const a = center(note), sel = id === S.selected ? ' sel' : '';
       const an = S.anchors[id];
       if (an) {
@@ -579,10 +607,26 @@
       }
       Object.entries(S.links[id] || {}).forEach(([cand, dir]) => {
         const pin = document.querySelector('.suspect[data-cand="' + CSS.escape(cand) + '"] .pin');
-        if (pin && dir) line(a, center(pin), 'str ' + dir + sel);
+        if (!pin || !dir) return;
+        const isNew = S.newLink === id + '|' + cand;
+        const d = line(a, center(pin), 'str ' + dir + sel + (isNew ? ' draw' : ''));
+        if (!S.submitted) hits += '<path d="' + d + '" class="str-hit" data-hit-note="' + esc(id) + '" data-hit-cand="' + esc(cand) + '"><title>Click to remove this string</title></path>';
       });
+      if (S.submitted && S.showPanelBoard && usesLikelihood()) {
+        const e = itemById(id); if (!e || !e.likelihood) return;
+        const vals = S.c.candidates.map((k) => (e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5)), mean = vals.reduce((x, y) => x + y, 0) / vals.length;
+        S.c.candidates.forEach((k) => {
+          const l = e.likelihood[k.id] != null ? e.likelihood[k.id] : 0.5;
+          const dir = l > mean + 0.06 ? 'for' : l < mean - 0.06 ? 'against' : null;
+          if (!dir) return;
+          const pin = document.querySelector('.suspect[data-cand="' + CSS.escape(k.id) + '"] .pin'); if (!pin) return;
+          const mine = (S.links[id] || {})[k.id], agree = mine === dir;
+          line(a, center(pin), 'str panel ' + dir + (agree ? ' agree' : ' missing'), '', 5);
+        });
+      }
     });
-    svg.innerHTML = out;
+    S.newLink = null;
+    svg.innerHTML = out + hits;
   }
 
   /* ---------- suspect sketches ---------- */
@@ -947,9 +991,9 @@
   function submit() {
     const c = S.c;
     const just = $('#justify').value.trim();
-    if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This case needs a written justification of at least a sentence or two.'; $('#justify').focus(); return; }
+    if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This case needs a written justification of at least a sentence or two before it can be submitted.'; $('#justify').focus(); return; }
     S.submitted = true; S.player = shares(); S.justification = just;
-    $('#toast').hidden = true;
+    $('#toast').hidden = true; $('#linkStatus').textContent = ''; armClue(null); S.showPanelBoard = false; $('#panelBoard').checked = false;
     document.body.classList.add('locked');
     $('#submit').disabled = true; $('#submitMsg').textContent = '';
     renderDebrief(); renderLeads(); renderRail(); renderModels();
@@ -968,7 +1012,7 @@
     const rows = c.candidates.map((k, i) => {
       const col = CAND_COLORS[i % CAND_COLORS.length];
       return '<div class="cmp-row"><div class="cmp-label"><b>' + String.fromCharCode(65 + i) + '</b> ' + esc(k.label) + '</div><div class="cmp-bars">' +
-        bar('You', P[k.id], col, '') + bar('Panel', E[k.id], col, 'expert') + (bayes ? bar('Panel, all evidence', Eall[k.id], col, 'expert all') : '') + '</div></div>';
+        bar('You', P[k.id], col, '') + bar('Panel', E[k.id], col, 'expert') + (bayes ? bar('Panel, all clues', Eall[k.id], col, 'expert all') : '') + '</div></div>';
     }).join('');
 
     let narrowing = '';
@@ -980,8 +1024,8 @@
         return '<tr class="' + (S.examined.includes(e.id) ? '' : 'unseen') + '"><td>' + noteNo(e.id) + '</td><td>' + (e.kind === 'lead' ? esc(e.label) + '<div class="subnote">' + esc(e.result || '') + '</div>' : esc(e.label)) + '</td><td>' +
           (e.kind === 'lead' ? (S.examined.includes(e.id) ? 'Requested' : 'Not requested') : (S.examined.includes(e.id) ? 'Examined' : 'Not examined')) + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop * 400) + '%"></span></span> ' + (drop * 100).toFixed(0) + '</td></tr>';
       }).join('');
-      narrowing = '<h4>How much each note narrows the field</h4><p class="howto">Reduction in the panel\u2019s [[spread|spread of confidence]], in percentage points, from that note alone starting from equal weights. Notes near zero are consistent with every suspect.</p>'.replace(/\[\[[^\]]+\]\]/g, (m) => rich(m)) +
-        '<div class="table-wrap"><table class="narrow"><thead><tr><th></th><th>Note</th><th>Status</th><th>Narrowing</th></tr></thead><tbody>' + rowsN + '</tbody></table></div>';
+      narrowing = '<h4>How much each clue narrows the field</h4><p class="howto">Reduction in the panel\u2019s [[spread|spread of confidence]], in percentage points, from that clue alone starting from equal weights. Clues near zero are consistent with every suspect.</p>'.replace(/\[\[[^\]]+\]\]/g, (m) => rich(m)) +
+        '<div class="table-wrap"><table class="narrow"><thead><tr><th></th><th>Clue</th><th>Status</th><th>Narrowing</th></tr></thead><tbody>' + rowsN + '</tbody></table></div>';
     }
 
     let topsTable = '';
@@ -1003,21 +1047,21 @@
       '<p class="stamp">Case ' + caseNumber(c) + ' · ' + esc(c.title) + '</p>' +
       '<p class="standing">Suspects still standing at 10% or more: <b>' + c.candidates.filter((k) => P[k.id] >= 0.1).length + ' of ' + c.candidates.length + '</b> in your case, <b>' + c.candidates.filter((k) => E[k.id] >= 0.1).length + '</b> for the panel.</p>' +
       '<h4>Confidence</h4>' +
-      (bayes ? '<p class="howto">Panel: the panel\u2019s distribution after the same ' + S.examined.length + ' note' + (S.examined.length === 1 ? '' : 's') + ' examined here. Panel, all evidence: after every evidence note, without leads.</p>' : '') +
+      (bayes ? '<p class="howto">Panel: the panel\u2019s distribution after the same ' + S.examined.length + ' clue' + (S.examined.length === 1 ? '' : 's') + ' examined here. Panel, all clues: after every clue, without leads.</p>' : '') +
       '<div class="cmp">' + rows + '</div>' +
       '<dl class="metrics">' +
       '<div><dt>' + rich('[[overlap|Overlap with panel]]') + '</dt><dd>' + pct(overlap) + '</dd></div>' +
       '<div><dt>' + rich('[[spread|Spread of confidence]]') + '</dt><dd>' + pct(spread(P)) + ' <small>you</small> / ' + pct(spread(E)) + ' <small>panel</small></dd></div>' +
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
-      (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
+      (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each clue"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
       discoveryReport() + byLine() + mlTable() +
       narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
         '<p class="basis">' + rich(c.outcome.basis || '') + '</p></div>' : '') +
       topsTable +
-      (c.debrief ? '<h4>Notes</h4><p>' + rich(c.debrief) + '</p>' : '') +
+      (c.debrief ? '<h4>Case notes</h4><p>' + rich(c.debrief) + '</p>' : '') +
       (S.justification ? '<h4>Your justification</h4><blockquote>' + esc(S.justification) + '</blockquote>' : '');
     if (bayes) drawTimeline($('#timelineBig'));
 
@@ -1056,7 +1100,7 @@
     const c = S.c, items = [], bayes = usesLikelihood();
     if (bayes) {
       const unseen = (c.evidence || []).filter((e) => diagnosticRatio(e) >= 2 && !S.examined.includes(e.id));
-      items.push('<li><strong>Diagnostic notes not examined:</strong> ' + (unseen.length ? unseen.map((e) => noteNo(e.id) + ' ' + esc(e.label)).join('; ') : 'none') + '</li>');
+      items.push('<li><strong>Diagnostic clues not examined:</strong> ' + (unseen.length ? unseen.map((e) => noteNo(e.id) + ' ' + esc(e.label)).join('; ') : 'none') + '</li>');
       const flips = [], idle = [];
       S.examined.forEach((id) => {
         const e = itemById(id), links = S.links[id] || {};
@@ -1069,7 +1113,7 @@
         if (Object.keys(links).length && diagnosticRatio(e) < 1.25) idle.push(noteNo(id) + ' ' + esc(e.label));
       });
       items.push('<li><strong>Strings the panel reads in the opposite direction:</strong> ' + (flips.length ? flips.join('; ') : 'none') + '</li>');
-      items.push('<li><strong>Strung notes the panel treats as consistent with every suspect:</strong> ' + (idle.length ? idle.join('; ') : 'none') + '</li>');
+      items.push('<li><strong>Strung clues the panel treats as consistent with every suspect:</strong> ' + (idle.length ? idle.join('; ') : 'none') + '</li>');
       const leads = (c.leads || []);
       if (leads.length) {
         const best = leads.reduce((a, l) => (spread(posterior([l.id])) < spread(posterior([a.id])) ? l : a), leads[0]);
@@ -1186,6 +1230,15 @@
       S.raw[s.dataset.cand] = Number(s.value); updateShares(); drawTimeline();
     });
     $('#suspects').addEventListener('toggle', () => requestAnimationFrame(drawStrings), true);
+    $('#suspects').addEventListener('click', (e) => {
+      if (!S.armed || e.target.closest('input, details, summary, .term, output, label')) return;
+      const card = e.target.closest('.suspect'); if (card) linkTo(card.dataset.cand);
+    });
+    $('#strings').addEventListener('click', (e) => {
+      const h = e.target.closest('[data-hit-note]'); if (h) removeLink(h.dataset.hitNote, h.dataset.hitCand);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.armed) { armClue(null); renderNotes(); } });
+    $('#panelBoard').addEventListener('change', (e) => { S.showPanelBoard = e.target.checked; drawStrings(); if (S.showPanelBoard) $('#board').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }); });
     $('#notes').addEventListener('click', (e) => { const b = e.target.closest('[data-note]'); if (b && !e.target.closest('.term')) examine(b.dataset.note); });
     $('#noteDetail').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-link]'); if (!b || S.submitted) return;

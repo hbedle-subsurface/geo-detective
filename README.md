@@ -1,12 +1,12 @@
 # Geo-Detective
 
-A browser game for seminars, laid out as a detective's evidence board. Geologists work with incomplete and ambiguous subsurface data, so each case has several suspects (candidate interpretations) and no single piece of evidence settles it.
+A browser game for seminars, laid out as a detective's detective board. Geologists work with incomplete and ambiguous subsurface data, so each case has several suspects (candidate interpretations) and no single piece of evidence settles it.
 
 Clues are organized in lines of evidence: seismic, well logs, seismic attributes, and machine learning, followed by leads. Two modes are available. In Discovery mode most clues start hidden and turn up through investigation: clicking something unusual on the section or in a well, switching attribute displays and logs, picking and flattening tops, switching to two-way time, and running models on the model bench, with hints available. In Lecture walk-through mode every clue is on the board and a rail steps through them one at a time (Next clue, or the arrow keys), so a room can follow the same sequence. Attributes (envelope, coherence, spectral decomposition, dip) and an unsupervised SOM are computed in the browser from the synthetic seismic. Machine learning clues report the model's own confidence, and the case report sets that beside how much each result actually narrows the field.
 
-On the board, the seismic line and well logs are pinned exhibits. The evidence is sticky notes circled on the exhibits and strung to the suspects they support or argue against. Confidence is shared among the suspects with sliders, and a chalkboard offers a limited number of leads (core, 3D seismic, biostratigraphy and others). An uncertainty timeline tracks how the spread of confidence changes as notes are examined.
+On the board, the seismic line and well logs are pinned exhibits. The evidence is clue cards circled on the exhibits and strung to the suspects they support or argue against by selecting a clue and clicking a suspect card. After a case is submitted, the panel's strings can be overlaid on the detective board. Confidence is shared among the suspects with sliders, and a chalkboard offers a limited number of leads (core, 3D seismic, biostratigraphy and others). An uncertainty timeline tracks how the spread of confidence changes as notes are examined.
 
-Closing the case produces a report. It compares the player's distribution with a panel distribution computed from likelihoods after the same evidence, shows how much each note and each lead narrows the field, and states what is known about the case with the confidence attached to it.
+Submitting the case produces a report. It compares the player's distribution with a panel distribution computed from likelihoods after the same evidence, shows how much each clue and each lead narrows the field, and states what is known about the case with the confidence attached to it.
 
 Live site (once pushed): `https://hbedle-subsurface.github.io/geo-detective/`
 

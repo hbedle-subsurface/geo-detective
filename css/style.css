@@ -75,6 +75,8 @@ main { padding: 0 clamp(8px, 2vw, 28px) 24px; }
   .strings { display: none; }
 }
 .strings { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: visible; }
+.str-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.str-hit:hover { stroke: rgba(255, 240, 200, 0.35); }
 .str { fill: none; stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.45)); }
 .str.for, .str.data { stroke: var(--string); }
 .str.data { stroke-width: 1.6; opacity: 0.85; }
@@ -358,3 +360,29 @@ body:not(.lecture) #seis { cursor: zoom-in; }
 .toast.show { animation: toastIn 0.25s ease-out; }
 @keyframes toastIn { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .toast.show { animation: none; } }
+
+/* detective board vocabulary and linking */
+.drawer-title { grid-column: 1 / -1; margin: 0; font: 13px var(--typed); color: #B8AB94; }
+.board-plaque { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); margin: 0; padding: 3px 16px; font: 15px var(--typed); letter-spacing: 0.08em; color: #F3EBDD; background: linear-gradient(#5C3F28, #3B2616); border: 1px solid #7A5A3C; box-shadow: 0 3px 6px rgba(0,0,0,0.5); z-index: 8; white-space: nowrap; }
+.board { margin-top: 30px; }
+.link-status { min-height: 1.2em; margin: 0 0 6px; font: 12.5px var(--typed); color: var(--red); }
+.note.armed { outline: 3px dashed var(--string); outline-offset: 3px; }
+body.linking .suspect.target { cursor: crosshair; transition: box-shadow 0.15s; }
+body.linking .suspect.target:hover { box-shadow: 0 0 0 3px var(--string), 0 6px 12px rgba(0,0,0,0.35); }
+.str.panel { stroke: #1F8A8A; stroke-width: 4; opacity: 0.9; }
+.str.panel.agree { stroke-width: 1.6; opacity: 0.8; }
+.str.panel.against { stroke-dasharray: 8 5; }
+/* motion */
+.note.flip { animation: cardFlip 0.7s ease-out; transform-origin: 50% 0; }
+@keyframes cardFlip { 0% { transform: perspective(600px) rotateY(90deg) translateY(-18px); opacity: 0.2; } 60% { transform: perspective(600px) rotateY(-8deg) translateY(2px); opacity: 1; } 100% { transform: rotate(var(--tilt)); } }
+.note.flip .pin { animation: pinDrop 0.45s 0.35s ease-in both; }
+@keyframes pinDrop { from { transform: translateY(-22px) scale(1.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.str.draw { stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: stringDraw 0.5s ease-out forwards; }
+@keyframes stringDraw { to { stroke-dashoffset: 0; } }
+.str.against.draw { animation: none; stroke-dashoffset: 0; stroke-dasharray: 7 5; }
+.suspect { transition: transform 0.15s; }
+body.linking .suspect.target:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: reduce) {
+  .note.flip, .note.flip .pin, .str.draw { animation: none; stroke-dashoffset: 0; }
+  .suspect, body.linking .suspect.target { transition: none; }
+}
