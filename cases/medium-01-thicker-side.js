@@ -280,7 +280,17 @@ GW.registerCase({
         "top_m": 500,
         "base_m": 1700
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "flatten"
+        },
+        {
+          "type": "pickTop",
+          "top": "Sand 4",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "fwthick",
@@ -311,7 +321,13 @@ GW.registerCase({
         "top_m": 1075,
         "base_m": 1155
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RHOB"
+        }
+      ]
     },
     {
       "id": "sonicspikes",
@@ -326,7 +342,13 @@ GW.registerCase({
         "top_m": 1075,
         "base_m": 1155
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "DT"
+        }
+      ]
     },
     {
       "id": "highgr",
@@ -341,7 +363,19 @@ GW.registerCase({
         "top_m": 500,
         "base_m": 1850
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Sand 1",
+          "minWells": 2
+        },
+        {
+          "type": "pickTop",
+          "top": "Sand 2",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "deep",
@@ -351,7 +385,12 @@ GW.registerCase({
         "wedge": 0.5,
         "withdrawal": 0.6
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "cohfade",
@@ -386,7 +425,17 @@ GW.registerCase({
         "z_m": 1550,
         "rx_m": 1600,
         "rz_m": 200
-      }
+      },
+      "discover": [
+        {
+          "type": "view",
+          "attribute": "spec_low"
+        },
+        {
+          "type": "view",
+          "attribute": "spec_high"
+        }
+      ]
     },
     {
       "id": "somclass",
@@ -416,7 +465,8 @@ GW.registerCase({
         "growth": 0.45,
         "wedge": 0.6,
         "withdrawal": 0.5
-      }
+      },
+      "modelName": "Interval thickness prediction"
     }
   ],
   "outcome": {

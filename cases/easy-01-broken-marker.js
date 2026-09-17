@@ -243,7 +243,16 @@ GW.registerCase({
         "top_m": 1180,
         "base_m": 1320
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Sand C"
+        },
+        {
+          "type": "lookWell"
+        }
+      ]
     },
     {
       "id": "thickness",
@@ -259,7 +268,15 @@ GW.registerCase({
         "rx_m": 1300,
         "rz_m": 350
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "flatten"
+        },
+        {
+          "type": "look"
+        }
+      ]
     },
     {
       "id": "oneline",
@@ -269,7 +286,12 @@ GW.registerCase({
         "strikeslip": 0.8,
         "erosion": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "regionaldip",
@@ -279,7 +301,12 @@ GW.registerCase({
         "strikeslip": 0.5,
         "erosion": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "shallow",
@@ -360,7 +387,8 @@ GW.registerCase({
         "normal": 0.55,
         "strikeslip": 0.5,
         "erosion": 0.25
-      }
+      },
+      "modelName": "Fault-detection network"
     }
   ],
   "outcome": {

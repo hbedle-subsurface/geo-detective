@@ -341,6 +341,34 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
 .line-name i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.3); }
 @media (max-width: 700px) { .line-row { grid-template-columns: 1fr 3em; } .line-row .track, .line-row .subnote { grid-column: 1 / -1; } }
 
+/* discovery mode */
+.rail-head { display: flex; flex-direction: column; gap: 4px; }
+.mode-seg { border-color: #4A3C2C; }
+.mode-seg button { background: #2A2118; color: #D9CFBD; font-size: 12px; }
+.mode-seg button + button { border-left-color: #4A3C2C; }
+.mode-seg button[aria-pressed="true"] { background: #D9C49A; color: var(--ink); }
+.btn.small.ghost { background: transparent; color: #F3EBDD; border-color: #7D705E; }
+.rail-dot.hidden-clue { border-style: dashed; color: #8C7E69; }
+.note.ghost { display: grid; place-items: center; cursor: default; transform: none; filter: none; min-height: 104px;
+  background: repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0 6px, transparent 6px 12px), #8A6A45; box-shadow: inset 0 0 0 2px var(--line); }
+.note.ghost .note-no { position: absolute; top: 6px; left: 8px; color: #F3EBDD; }
+.ghost-q { font: 34px var(--typed); color: rgba(243, 235, 221, 0.55); }
+body:not(.lecture) #seis { cursor: zoom-in; }
+.found-how { margin: 2px 0 6px; font: 12.5px var(--typed); color: #3E6B1F; }
+.models { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.models li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; align-items: center; padding-top: 6px; border-top: 1px dashed #C9B8E0; }
+.model-name { font-weight: 600; font-size: 13.5px; }
+.model-sub { grid-column: 1; font-size: 12px; color: var(--slate); }
+.models li .btn { grid-row: 1 / 3; grid-column: 2; }
+.models-card { background: #F1EBFA; }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 50; max-width: min(560px, 92vw); background: #FFFDF8; color: var(--ink); padding: 10px 16px; border-top: 4px solid var(--string); box-shadow: 0 10px 30px rgba(0,0,0,0.55); font-size: 14px; }
+.toast p { margin: 2px 0; }
+.toast-title { font: 15px var(--typed); color: var(--red); }
+.toast-no { display: inline-block; padding: 0 5px; font: 12px var(--typed); color: var(--ink); border-radius: 2px; }
+.toast.show { animation: toastIn 0.25s ease-out; }
+@keyframes toastIn { from { transform: translate(-50%, 16px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast.show { animation: none; } }
+
 </style>
 
 </head>
@@ -368,11 +396,13 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
 
   <main id="game" hidden>
     <div class="rail" id="rail">
-      <p class="rail-title">Lines of evidence</p>
+      <div class="rail-head"><p class="rail-title">Lines of evidence</p>
+        <span id="modeSwitch" class="seg mode-seg" role="group" aria-label="Mode"><button type="button" data-mode="discovery">Discovery</button><button type="button" data-mode="lecture">Lecture walk-through</button></span></div>
       <div id="railLines" class="rail-lines"></div>
       <div class="rail-nav">
         <button type="button" id="cluePrev" class="btn small">◀ Previous clue</button>
         <span id="clueCount" class="clue-count"></span>
+        <button type="button" id="hintBtn" class="btn small ghost">Hint</button>
         <button type="button" id="clueNext" class="btn primary">Next clue ▶</button>
       </div>
     </div>
@@ -442,6 +472,12 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
           <p class="chalk-title"><span class="num">3</span>Leads</p>
           <p class="chalk-sub">More data can be requested. <span id="leadsLeft"></span></p>
           <ul id="leads" class="leads"></ul>
+        </section>
+        <section class="card models-card" id="modelsCard">
+          <span class="pin"></span>
+          <p class="typed-label">Model bench</p>
+          <p class="howto">Machine learning results for this line.</p>
+          <ul id="models" class="models"></ul>
         </section>
         <section class="card timeline-card" id="timelineCard">
           <span class="pin"></span>
@@ -517,7 +553,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
       <p class="typed-label">How to play</p>
       <h2>Working a case</h2>
       <ol class="how-steps">
-        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. <b>Next clue</b> (or the arrow keys) steps through them in order; any note can also be opened directly. Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
+        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. In <b>Discovery</b> mode most clues start hidden and turn up through investigation: clicking something unusual on the section or in a well, switching displays and logs, picking and flattening tops, and running models on the model bench. <b>Hint</b> points toward a clue not yet found. In <b>Lecture walk-through</b> mode every clue is on the board, and <b>Next clue</b> or the arrow keys step through them in order. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
         <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
         <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
         <li><b>Close the case.</b> The case report compares your distribution with the panel after the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
@@ -532,6 +568,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     </div>
   </dialog>
 
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <div id="termPop" class="term-pop" role="dialog" hidden></div>
 
   <script>/* js/synth.js */
@@ -1198,7 +1235,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
   const pct = (v) => Math.round(v * 100) + '%';
   const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const S = { c: null, session: [], tier: 'easy' };
+  const S = { c: null, session: [], tier: 'easy', mode: 'discovery' };
 
   /* ---------- registration and validation ---------- */
   function validate(c) {
@@ -1335,7 +1372,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     Object.assign(S, {
       expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null,
+      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null, found: new Set(), foundHow: {}, hints: 0, hinted: new Set(), looks: 0,
       picks: {}, submitted: false, flatten: '', logType: 'GR',
       viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', attr: 'amplitude', attrsSeen: new Set(['amplitude']), showPanel: false, gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
@@ -1408,6 +1445,8 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     $('#showPanel').checked = S.showPanel;
     renderLegend();
     renderSuspects();
+    if (S.mode === 'discovery') orderedEvidence().forEach((e) => { if (triggersOf(e).some((t) => t.type === 'given')) { S.found.add(e.id); S.foundHow[e.id] = 'In the case file'; if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); } } });
+    renderModels();
     renderRail();
     renderNotes();
     renderNoteDetail();
@@ -1455,6 +1494,11 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     let html = '', lastLine = null, i = 0;
     items.forEach((e) => {
       const ln = lineOf(e);
+      if (!isFound(e.id)) {
+        if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
+        html += '<span class="note ghost" style="--line:' + lineInfo(ln).color + '"><span class="note-no">' + noteNo(e.id) + '</span><span class="ghost-q" aria-label="Clue not yet found">?</span></span>';
+        return;
+      }
       if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
       const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
       const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
@@ -1467,6 +1511,121 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     $('#notes').innerHTML = html;
   }
 
+  /* ---------- discovery ---------- */
+  const isFound = (id) => S.mode === 'lecture' || S.found.has(id) || !orderedEvidence().some((e) => e.id === id);
+  function triggersOf(e) {
+    if (e.discover) return e.discover;
+    const w = e.where, ln = lineOf(e);
+    if (ln === 'ml' && !(w && w.attribute)) return [{ type: 'model' }];
+    if (w && w.attribute) return [{ type: 'view', attribute: w.attribute }];
+    if (w && w.well) return [{ type: 'lookWell', well: w.well, top_m: w.top_m, base_m: w.base_m }];
+    if (w && w.x_m != null) return [{ type: 'look', x_m: w.x_m, z_m: w.z_m, rx_m: w.rx_m, rz_m: w.rz_m }];
+    return [{ type: 'given' }];
+  }
+  function matches(t, ev, e) {
+    if (t.type !== ev.type) return false;
+    const w = e.where || {};
+    switch (t.type) {
+      case 'view': return t.attribute === ev.attribute;
+      case 'log': return t.log === ev.log;
+      case 'domain': return t.domain === ev.domain;
+      case 'flatten': return !t.top || t.top === ev.top;
+      case 'pickTop': return t.top === ev.top && ev.count >= (t.minWells || 1);
+      case 'model': return ev.id === e.id;
+      case 'look': {
+        const x = t.x_m != null ? t.x_m : w.x_m, z = t.z_m != null ? t.z_m : w.z_m;
+        const rx = (t.rx_m || w.rx_m || 300) * 1.25, rz = (t.rz_m || w.rz_m || 150) * 1.25, attr = t.attribute || 'amplitude';
+        return ev.attribute === attr && ((ev.x - x) / rx) ** 2 + ((ev.z - z) / rz) ** 2 <= 1;
+      }
+      case 'lookWell': {
+        const top = t.top_m != null ? t.top_m : w.top_m, base = t.base_m != null ? t.base_m : w.base_m;
+        return (t.well || w.well) === ev.well && ev.depth >= top - 15 && ev.depth <= base + 15;
+      }
+    }
+    return false;
+  }
+  const HOW = {
+    view: (t) => 'switched to the ' + GW.ATTRIBUTES[t.attribute].label.toLowerCase() + ' display',
+    log: (t) => 'displayed the ' + LOGS[t.log].label.toLowerCase() + ' log',
+    domain: () => 'switched to two-way time',
+    flatten: () => 'flattened the logs on a top',
+    pickTop: (t) => 'picked ' + t.top,
+    model: () => 'ran the model',
+    look: () => 'inspected the section',
+    lookWell: (t) => 'inspected well ' + t.well
+  };
+  function hintFor(e) {
+    if (e.hint) return e.hint;
+    const t = triggersOf(e).find((q) => q.type !== 'given') || {};
+    const w = e.where || {};
+    switch (t.type) {
+      case 'view': return 'Something shows on the ' + GW.ATTRIBUTES[t.attribute].label.toLowerCase() + ' display.';
+      case 'log': return 'A clue is in the ' + LOGS[t.log].label.toLowerCase() + ' log.';
+      case 'domain': return 'The line can also be displayed in two-way time.';
+      case 'flatten': return 'Flattening the logs on a picked top shows something.';
+      case 'pickTop': return 'Picking ' + t.top + ' in the wells shows something.';
+      case 'model': return 'The model bench has a result not yet run.';
+      case 'look': { const x = t.x_m != null ? t.x_m : w.x_m, z = t.z_m != null ? t.z_m : w.z_m; return 'Look closely at the section around ' + (Math.round(x / 500) * 0.5).toFixed(1) + ' km, ' + Math.round(z / 100) * 100 + ' m.'; }
+      case 'lookWell': { const top = t.top_m != null ? t.top_m : w.top_m, base = t.base_m != null ? t.base_m : w.base_m; return 'Look closely at well ' + (t.well || w.well) + ' between ' + Math.round(top / 50) * 50 + ' and ' + Math.round(base / 50) * 50 + ' m.'; }
+    }
+    return 'Read the case file again.';
+  }
+  function trigger(ev) {
+    if (!S.c || S.mode !== 'discovery' || S.submitted) return false;
+    const hits = [];
+    orderedEvidence().forEach((e) => {
+      if (S.found.has(e.id)) return;
+      const t = triggersOf(e).find((q) => matches(q, ev, e));
+      if (t) hits.push({ e, t });
+    });
+    hits.forEach(({ e, t }) => {
+      S.found.add(e.id); S.foundHow[e.id] = (HOW[t.type] || (() => 'found'))(t);
+      if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); }
+    });
+    if (hits.length) {
+      S.selected = hits[hits.length - 1].e.id;
+      toast(hits.map(({ e }) => '<span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + noteNo(e.id) + '</span> ' + esc(e.label)).join('<br>'), 'New clue' + (hits.length > 1 ? 's' : '') + ' found');
+      renderNotes(); renderNoteDetail(); renderRail(); renderModels();
+      drawTimeline(); requestAnimationFrame(() => { drawSeis(); drawLogs(); drawStrings(); });
+    }
+    return hits.length > 0;
+  }
+  function toast(html, title) {
+    const t = $('#toast');
+    t.innerHTML = '<p class="toast-title">' + esc(title) + '</p><p>' + html + '</p>';
+    t.hidden = false; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    clearTimeout(S._toastT); S._toastT = setTimeout(() => { t.hidden = true; }, 4200);
+  }
+  function giveHint() {
+    const pending = orderedEvidence().filter((e) => !S.found.has(e.id));
+    if (!pending.length) { toast('Every clue on this case has been found.', 'Hint'); return; }
+    const fresh = pending.filter((e) => !S.hinted.has(e.id)), e = (fresh.length ? fresh : pending)[0];
+    S.hinted.add(e.id); S.hints++;
+    toast('<span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + lineInfo(lineOf(e)).label + '</span> ' + esc(hintFor(e)), 'Hint');
+    renderRail();
+  }
+  const plainTerms = (t) => String(t || '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, k, l) => l || k);
+  function renderModels() {
+    const ml = orderedEvidence().filter((e) => lineOf(e) === 'ml');
+    const hasSom = ml.some((e) => e.where && e.where.attribute === 'som');
+    const models = ml.filter((e) => !(e.where && e.where.attribute));
+    $('#modelsCard').hidden = !ml.length;
+    let html = '';
+    if (hasSom) html += '<li><span class="model-name">Self-organizing map facies</span><span class="model-sub">Unsupervised, 8 classes, from four attributes</span><button type="button" class="btn small" data-run="som">' + (S.attrsSeen.has('som') ? 'Show' : 'Run') + '</button></li>';
+    models.forEach((e) => {
+      const done = S.mode === 'lecture' || S.found.has(e.id);
+      html += '<li><span class="model-name">' + esc(e.modelName || 'Model') + '</span><span class="model-sub">' + esc(plainTerms(e.model)) + '</span><button type="button" class="btn small" data-run="' + esc(e.id) + '">' + (done ? 'Open result' : 'Run') + '</button></li>';
+    });
+    $('#models').innerHTML = html;
+  }
+  function setMode(mode) {
+    if (S.mode === mode) return;
+    S.mode = mode;
+    try { localStorage.setItem('geoDetectiveMode', mode); } catch (e) { /* storage unavailable */ }
+    document.body.classList.toggle('lecture', mode === 'lecture');
+    if (S.c) loadCase(S.c.id);
+  }
+
   /* ---------- lines of evidence rail and walk-through ---------- */
   function walkOrder() { return orderedEvidence().map((e) => e.id); }
   function renderRail() {
@@ -1475,12 +1634,16 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
     $('#railLines').innerHTML = groups.map((g) =>
       '<div class="rail-line" style="--line:' + g.l.color + '"><span class="rail-label">' + g.l.label + '</span><span class="rail-dots">' +
-      g.items.map((e) => '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + '" data-rail="' + esc(e.id) + '"' + (e.kind === 'lead' && !S.examined.includes(e.id) ? ' disabled' : '') + ' title="' + esc(noteNo(e.id) + ' ' + e.label) + '">' + noteNo(e.id) + '</button>').join('') +
+      g.items.map((e) => { const hid = e.kind !== 'lead' && !isFound(e.id); return '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + (hid ? ' hidden-clue' : '') + '" data-rail="' + esc(e.id) + '"' + ((e.kind === 'lead' && !S.examined.includes(e.id)) || hid ? ' disabled' : '') + ' title="' + esc(hid ? noteNo(e.id) + ' not yet found' : noteNo(e.id) + ' ' + e.label) + '">' + (hid ? '?' : noteNo(e.id)) + '</button>'; }).join('') +
       '</span></div>').join('');
     const next = order.find((id, k) => k > pos && !S.examined.includes(id)) || order[pos + 1];
     $('#clueNext').disabled = !next;
     $('#cluePrev').disabled = pos <= 0;
-    $('#clueCount').textContent = S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+    const disc = S.mode === 'discovery';
+    $('#clueCount').textContent = disc ? S.found.size + ' of ' + order.length + ' clues found' + (S.hints ? ' · ' + S.hints + ' hint' + (S.hints === 1 ? '' : 's') : '') : S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+    $('#cluePrev').hidden = $('#clueNext').hidden = disc;
+    $('#hintBtn').hidden = !disc || S.submitted;
+    document.querySelectorAll('#modeSwitch button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode));
   }
   function stepClue(dir) {
     const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
@@ -1503,7 +1666,8 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     const ln = lineInfo(lineOf(e));
     box.style.setProperty('--line', ln.color);
     const model = lineOf(e) === 'ml' && (e.model || e.reportedConfidence != null) ? '<p class="model-card">' + (e.model ? '<span>' + rich(e.model) + '</span>' : '') + (e.reportedConfidence != null ? '<span>Confidence reported by the model: <b>' + pct(e.reportedConfidence) + '</b></span>' : '') + '</p>' : '';
-    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + model +
+    const how = S.mode === 'discovery' && S.foundHow[e.id] ? '<p class="found-how">Found: ' + esc(S.foundHow[e.id]) + '</p>' : '';
+    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + how + model +
       (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
       '<p class="howto">String this note to the suspects it bears on:</p>' +
       '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
@@ -1527,6 +1691,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
 
   function setAttr(k) {
     S.attr = k; S.attrsSeen.add(k); $('#attr').value = k; S._imgKey = null;
+    setTimeout(() => trigger({ type: 'view', attribute: k }), 60);
     $('#building').hidden = false; $('#building').textContent = 'Computing ' + GW.ATTRIBUTES[k].label.toLowerCase() + '…';
     setTimeout(() => { GW.attribute(S.section, k); $('#building').hidden = true; renderLegend(); drawSeis(); drawStrings(); }, 20);
   }
@@ -1793,8 +1958,16 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
       circleMark(ctx, cx, cy, rx, ry, e.id === S.selected, noteNo(e.id));
       S.anchors[e.id] = { el: 'seis', x: cx + rx * 0.72, y: cy - ry * 0.72 };
     });
+    drawRipple(ctx);
   }
 
+  function drawRipple(ctx) {
+    if (!S.ripple) return;
+    ctx.save(); ctx.strokeStyle = S.ripple.found ? '#C0161F' : 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(S.ripple.x, S.ripple.y, 15, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(S.ripple.x, S.ripple.y, 17.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   function circleMark(ctx, cx, cy, rx, ry, strong, label) {
     ctx.save();
     ctx.strokeStyle = '#C0161F'; ctx.lineWidth = strong ? 3.2 : 2.2; ctx.globalAlpha = strong ? 1 : 0.85;
@@ -1934,7 +2107,13 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
   }
 
   function logClick(ev) {
-    if (S.submitted || !S.activeTop || !S.logGeom) return;
+    if (S.submitted || !S.logGeom) return;
+    if (!S.activeTop) {
+      const r0 = ev.target.getBoundingClientRect(), x0 = ev.clientX - r0.left, y0 = ev.clientY - r0.top, G = S.logGeom;
+      const k0 = Math.floor((x0 - G.m.l) / (G.tw + G.gap));
+      if (k0 >= 0 && k0 < S.c.wells.length && y0 > G.m.t) { const wn = S.c.wells[k0].name; trigger({ type: 'lookWell', well: wn, depth: G.win.top_m + ((y0 - G.m.t) / G.ph) * (G.win.base_m - G.win.top_m) + flatShift(wn) }); }
+      return;
+    }
     const r = ev.target.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const { m, tw, gap, ph, win } = S.logGeom;
     const k = Math.floor((x - m.l) / (tw + gap));
@@ -1950,7 +2129,9 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     } else {
       if (S.flatten === S.activeTop) return; // flattened top cannot be moved while flattened
       P[w.name] = Math.round(d);
+      trigger({ type: 'pickTop', top: S.activeTop, count: S.c.wells.filter((q) => P[q.name] != null).length });
     }
+    trigger({ type: 'lookWell', well: w.name, depth: d });
     drawLogs(); drawSeis(); drawStrings();
   }
 
@@ -1960,9 +2141,10 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     const just = $('#justify').value.trim();
     if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This case needs a written justification of at least a sentence or two.'; $('#justify').focus(); return; }
     S.submitted = true; S.player = shares(); S.justification = just;
+    $('#toast').hidden = true;
     document.body.classList.add('locked');
     $('#submit').disabled = true; $('#submitMsg').textContent = '';
-    renderDebrief(); renderLeads();
+    renderDebrief(); renderLeads(); renderRail(); renderModels();
     drawSeis(); drawLogs(); drawTimeline(); drawStrings();
     $('#debrief').hidden = false;
     $('#debrief').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -2021,7 +2203,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
       (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
-      byLine() + mlTable() +
+      discoveryReport() + byLine() + mlTable() +
       narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
@@ -2034,10 +2216,18 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     $('#biasToggle').checked = false; $('#bias').hidden = true;
     $('#bias').innerHTML = biasCheck(E);
     S.session = S.session.filter((r) => r.id !== c.id);
-    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.examined.length, you: spread(P), panel: spread(E) });
+    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.mode === 'discovery' ? S.found.size + ' of ' + orderedEvidence().length + ' found' : S.examined.length + ' examined', you: spread(P), panel: spread(E) });
     renderSession();
   }
 
+  function discoveryReport() {
+    if (S.mode !== 'discovery') return '';
+    const ev = orderedEvidence(), missed = ev.filter((e) => !S.found.has(e.id));
+    const drop = (e) => Math.round(Math.max(0, 1 - spread(posterior([e.id]))) * 100);
+    return '<h4>Clues found</h4><p class="standing">' + (ev.length - missed.length) + ' of ' + ev.length + ' clues found' + (S.hints ? ', with ' + S.hints + ' hint' + (S.hints === 1 ? '' : 's') : ', with no hints') + '.</p>' +
+      (missed.length ? '<p class="howto">Clues not found, where each was, and how much each narrows the panel\u2019s field on its own.</p><div class="table-wrap"><table><thead><tr><th></th><th>Clue</th><th>Where it was</th><th>Narrowing</th></tr></thead><tbody>' +
+        missed.map((e) => '<tr><td><span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + noteNo(e.id) + '</span></td><td>' + esc(e.label) + '</td><td>' + esc(hintFor(e)) + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop(e) * 3) + '%"></span></span> ' + drop(e) + '</td></tr>').join('') + '</tbody></table></div>' : '');
+  }
   function byLine() {
     if (!usesLikelihood()) return '';
     const groups = LINES.map((l) => ({ l, items: allItems().filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
@@ -2131,15 +2321,26 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     $('#attr').addEventListener('change', (e) => setAttr(e.target.value));
     $('#showPanel').addEventListener('change', (e) => { S.showPanel = e.target.checked; drawTimeline(); });
     $('#cluePrev').addEventListener('click', () => stepClue(-1));
+    $('#hintBtn').addEventListener('click', giveHint);
+    $('#modeSwitch').addEventListener('click', (e) => { const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); });
+    $('#models').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-run]'); if (!b || b.disabled) return;
+      if (b.dataset.run === 'som') { setAttr('som'); $('#seisPanel').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' }); setTimeout(renderModels, 80); return; }
+      const id = b.dataset.run;
+      if (S.mode === 'lecture' || S.found.has(id) || S.submitted) { examine(id); return; }
+      b.disabled = true; b.textContent = 'Running…';
+      setTimeout(() => { trigger({ type: 'model', id }); examine(id); renderModels(); }, 700);
+    });
     $('#clueNext').addEventListener('click', () => stepClue(1));
     $('#railLines').addEventListener('click', (e) => { const b = e.target.closest('button[data-rail]'); if (b && !b.disabled) { examine(b.dataset.rail); focusClue(b.dataset.rail); } });
-    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
-    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); });
+    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (S.mode !== 'lecture') return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
+    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); trigger({ type: 'domain', domain: S.domain }); });
     $('#gain').addEventListener('input', (e) => { S.gain = Number(e.target.value); $('#gainOut').textContent = S.gain.toFixed(1) + '×'; drawSeis(); });
     $('#showWells').addEventListener('change', (e) => { S.showWells = e.target.checked; drawSeis(); });
     $('#logType').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-log]'); if (!b || b.disabled) return;
       S.logType = b.dataset.log; (LOGS[S.logType].combo || [S.logType]).forEach((k) => S.viewed.add(k));
+      (LOGS[S.logType].combo || [S.logType]).forEach((k) => trigger({ type: 'log', log: k }));
       document.querySelectorAll('#logType button').forEach((x) => x.setAttribute('aria-pressed', x === b));
       drawLogs(); drawStrings();
     });
@@ -2147,7 +2348,7 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     $('#flatten').addEventListener('change', (e) => {
       const t = e.target.value;
       if (t && S.c.wells.some((w) => S.picks[t][w.name] == null)) { $('#logReadout').textContent = 'Pick ' + t + ' in every well to flatten on it.'; e.target.value = S.flatten; return; }
-      S.flatten = t; if (t) S.flattenUsed = true; drawLogs(); drawStrings();
+      S.flatten = t; if (t) { S.flattenUsed = true; trigger({ type: 'flatten', top: t }); } drawLogs(); drawStrings();
     });
     $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); drawStrings(); });
     const lc = $('#logs');
@@ -2155,6 +2356,15 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
     lc.addEventListener('mousemove', (e) => { S.hoverY = e.clientY - lc.getBoundingClientRect().top; drawLogs(); });
     lc.addEventListener('mouseleave', () => { S.hoverY = null; $('#logReadout').textContent = ''; drawLogs(); });
     const sc = $('#seis');
+    sc.addEventListener('click', (e) => {
+      const g = S.seisGeom; if (!g || !S.section) return;
+      const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
+      if (x < 0 || x > S.width_m || v < 0 || v > g.vmax) return;
+      const z = S.domain === 'time' ? zAt(x, v) : v;
+      S.looks++;
+      S.ripple = { x: e.clientX - r.left, y: e.clientY - r.top, found: trigger({ type: 'look', x, z, attribute: S.attr }) };
+      drawSeis(); clearTimeout(S._ripT); S._ripT = setTimeout(() => { S.ripple = null; drawSeis(); }, 450);
+    });
     sc.addEventListener('mousemove', (e) => {
       const g = S.seisGeom; if (!g) return;
       const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
@@ -2228,6 +2438,8 @@ dialog.how { width: min(680px, 94vw); background: #F3EAD3; border-top: 6px solid
 
   GW.start = async function () {
     GW._ready = true;
+    try { const m = localStorage.getItem('geoDetectiveMode'); if (m === 'lecture' || m === 'discovery') S.mode = m; } catch (e) { /* storage unavailable */ }
+    document.body.classList.toggle('lecture', S.mode === 'lecture');
     wire();
     const params = new URLSearchParams(location.search);
     const url = params.get('case');
@@ -2495,7 +2707,16 @@ GW.registerCase({
         "top_m": 1180,
         "base_m": 1320
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Sand C"
+        },
+        {
+          "type": "lookWell"
+        }
+      ]
     },
     {
       "id": "thickness",
@@ -2511,7 +2732,15 @@ GW.registerCase({
         "rx_m": 1300,
         "rz_m": 350
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "flatten"
+        },
+        {
+          "type": "look"
+        }
+      ]
     },
     {
       "id": "oneline",
@@ -2521,7 +2750,12 @@ GW.registerCase({
         "strikeslip": 0.8,
         "erosion": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "regionaldip",
@@ -2531,7 +2765,12 @@ GW.registerCase({
         "strikeslip": 0.5,
         "erosion": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "shallow",
@@ -2612,7 +2851,8 @@ GW.registerCase({
         "normal": 0.55,
         "strikeslip": 0.5,
         "erosion": 0.25
-      }
+      },
+      "modelName": "Fault-detection network"
     }
   ],
   "outcome": {
@@ -2949,7 +3189,17 @@ GW.registerCase({
         "top_m": 500,
         "base_m": 1700
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "flatten"
+        },
+        {
+          "type": "pickTop",
+          "top": "Sand 4",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "fwthick",
@@ -2980,7 +3230,13 @@ GW.registerCase({
         "top_m": 1075,
         "base_m": 1155
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RHOB"
+        }
+      ]
     },
     {
       "id": "sonicspikes",
@@ -2995,7 +3251,13 @@ GW.registerCase({
         "top_m": 1075,
         "base_m": 1155
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "DT"
+        }
+      ]
     },
     {
       "id": "highgr",
@@ -3010,7 +3272,19 @@ GW.registerCase({
         "top_m": 500,
         "base_m": 1850
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Sand 1",
+          "minWells": 2
+        },
+        {
+          "type": "pickTop",
+          "top": "Sand 2",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "deep",
@@ -3020,7 +3294,12 @@ GW.registerCase({
         "wedge": 0.5,
         "withdrawal": 0.6
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "cohfade",
@@ -3055,7 +3334,17 @@ GW.registerCase({
         "z_m": 1550,
         "rx_m": 1600,
         "rz_m": 200
-      }
+      },
+      "discover": [
+        {
+          "type": "view",
+          "attribute": "spec_low"
+        },
+        {
+          "type": "view",
+          "attribute": "spec_high"
+        }
+      ]
     },
     {
       "id": "somclass",
@@ -3085,7 +3374,8 @@ GW.registerCase({
         "growth": 0.45,
         "wedge": 0.6,
         "withdrawal": 0.5
-      }
+      },
+      "modelName": "Interval thickness prediction"
     }
   ],
   "outcome": {
@@ -3432,7 +3722,16 @@ GW.registerCase({
         "top_m": 1145,
         "base_m": 1215
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RHOB"
+        },
+        {
+          "type": "lookWell"
+        }
+      ]
     },
     {
       "id": "grcorr",
@@ -3447,7 +3746,14 @@ GW.registerCase({
         "top_m": 1335,
         "base_m": 1400
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Low-GR unit",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "rescorr",
@@ -3462,7 +3768,13 @@ GW.registerCase({
         "top_m": 1145,
         "base_m": 1215
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RES"
+        }
+      ]
     },
     {
       "id": "dim",
@@ -3478,7 +3790,12 @@ GW.registerCase({
         "rx_m": 650,
         "rz_m": 350
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        }
+      ]
     },
     {
       "id": "basemarker",
@@ -3493,7 +3810,18 @@ GW.registerCase({
         "top_m": 1405,
         "base_m": 1455
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Base Marker",
+          "minWells": 2
+        },
+        {
+          "type": "flatten",
+          "top": "Base Marker"
+        }
+      ]
     },
     {
       "id": "w3res",
@@ -3508,7 +3836,13 @@ GW.registerCase({
         "top_m": 700,
         "base_m": 1900
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RES"
+        }
+      ]
     },
     {
       "id": "deepevent",
@@ -3524,7 +3858,16 @@ GW.registerCase({
         "rx_m": 900,
         "rz_m": 160
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        },
+        {
+          "type": "domain",
+          "domain": "time"
+        }
+      ]
     },
     {
       "id": "envcrest",
@@ -3606,7 +3949,8 @@ GW.registerCase({
         "growthfold": 0.5,
         "drape": 0.55,
         "diapir": 0.48
-      }
+      },
+      "modelName": "Reef classifier"
     }
   ],
   "outcome": {
@@ -3840,7 +4184,16 @@ GW.registerCase({
         "rx_m": 380,
         "rz_m": 90
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        },
+        {
+          "type": "domain",
+          "domain": "time"
+        }
+      ]
     },
     {
       "id": "stacked",
@@ -3872,7 +4225,12 @@ GW.registerCase({
         "rx_m": 650,
         "rz_m": 160
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "nowells",
@@ -3882,7 +4240,12 @@ GW.registerCase({
         "submarine": 0.5,
         "collapse": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "amplitude",
@@ -3995,7 +4358,8 @@ GW.registerCase({
         "valley": 0.5,
         "submarine": 0.5,
         "collapse": 0.55
-      }
+      },
+      "modelName": "Fault-detection network"
     }
   ],
   "outcome": {
@@ -4050,7 +4414,7 @@ GW.registerCase({
 
 </script>
   <script>/* cases/submitted */
-GW.registerCase({"id": "easy-02-twice-through", "title": "Twice through", "tier": "easy", "author": "Heather Bedle (example of a case submitted as a JSON file)", "summary": "Reflections step up to the east, and one well logs the same-looking sand twice.", "brief": "Reflections east of a moderately dipping surface sit higher than their counterparts to the west. W2 logs two sands of similar thickness and character where W1 logs one.", "seismic": {"type": "synthetic", "frequency_hz": 38, "phase_deg": 0, "Q": 180, "noise": 0.15, "multiples": 0.3, "diffractions": 0.3, "statics_ms": 2, "footprint": 0.03, "velocityError": 0.015, "seed": 111, "model": {"width_m": 4000, "depth_m": 2200, "dx_m": 12.5, "dz_m": 4, "dip_m_per_km": 20, "layers": [{"name": "Overburden", "lith": "shale", "thickness_m": 500, "lamination": 0.9}, {"name": "Sand A", "lith": "sand", "thickness_m": 60, "profile": "fining"}, {"name": "Shale 1", "lith": "shale", "thickness_m": 120}, {"name": "Ridge Limestone", "lith": "limestone", "thickness_m": 40}, {"name": "Shale 2", "lith": "silty_shale", "thickness_m": 150}, {"name": "Sand B", "lith": "sand", "thickness_m": 80, "profile": "coarsening"}, {"name": "Shale 3", "lith": "shale", "thickness_m": 200}, {"name": "Sand C", "lith": "tight_sand", "thickness_m": 70}, {"name": "Shale 4", "lith": "shale", "thickness_m": 400}, {"name": "Lower Limestone", "lith": "limestone", "thickness_m": 50}, {"name": "Basal shale", "lith": "silty_shale", "thickness_m": 1000}], "faults": [{"x_m": 1600, "dip_deg": 40, "dipDirection": 1, "throw_m": 110, "sense": "reverse", "tip_m": 380, "tipTaper_m": 120}]}, "velocitySmoothing_m": 25}, "wells": [{"name": "W1", "x_m": 900, "td_m": 1800, "depthUncertainty_m": 5, "note": "Modern wireline suite: gamma ray, caliper, resistivity, density, neutron, sonic."}, {"name": "W2", "x_m": 2684, "td_m": 1800, "depthUncertainty_m": 8, "note": "Vertical well. Cuttings descriptions report the same fine sandstone at both levels."}], "logWindow": {"top_m": 450, "base_m": 1750}, "tops": [{"name": "Ridge Limestone", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B, second", "expert": {"W1": {"absent": true}, "W2": {"depth": 924, "unc_m": 10, "note": "Footwall Sand B below the fault."}}}, {"name": "Sand C", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}], "candidates": [{"id": "reverse", "label": "Reverse fault", "description": "A [[reverse-fault]] with the [[hanging-wall]] up to the east, formed under horizontal shortening.", "pros": ["Reflections east of the fault are higher by a similar amount at every level.", "A borehole crossing a reverse fault logs part of the section twice, as W2 does for Sand B."], "cons": ["A single 2D line records only [[apparent-separation]]."], "sketch": "reverse-fault"}, {"id": "strikeslip", "label": "Strike-slip fault", "description": "A [[strike-slip]] fault whose horizontal motion appears as reverse separation on this line.", "pros": ["No strike information is available from one line."], "cons": ["Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."], "sketch": "strike-slip"}, {"id": "twosands", "label": "Two similar sands, no repetition", "description": "W2 penetrated two separate sand bodies with similar log character; the offset of reflections has another cause.", "pros": ["Sands of similar thickness and log shape are common in a cyclic succession."], "cons": ["W1 has only one sand at this level, 1.9 km away.", "The two W2 sands bracket the depth where the discontinuity crosses the well."], "sketch": "two-sands"}], "evidence": [{"id": "up", "label": "Reflections higher east of the discontinuity", "likelihood": {"reverse": 0.9, "strikeslip": 0.6, "twosands": 0.5}, "where": {"x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 500}, "line": "seismic"}, {"id": "repeat", "label": "Two Sand B-like units in W2", "likelihood": {"reverse": 0.8, "strikeslip": 0.3, "twosands": 0.5}, "where": {"well": "W2", "top_m": 805, "base_m": 1010}, "line": "logs"}, {"id": "bracket", "label": "The two sands bracket the fault crossing in W2", "likelihood": {"reverse": 0.85, "strikeslip": 0.4, "twosands": 0.25}, "where": {"well": "W2", "top_m": 890, "base_m": 930}, "line": "logs"}, {"id": "cuttings", "label": "Cuttings descriptions identical at both levels", "likelihood": {"reverse": 0.6, "strikeslip": 0.5, "twosands": 0.5}, "line": "seismic"}, {"id": "oneline", "label": "Only one 2D line", "likelihood": {"reverse": 0.5, "strikeslip": 0.7, "twosands": 0.5}, "line": "seismic"}, {"id": "coh", "line": "attributes", "label": "Coherence: one narrow low-coherence line dips east through the step", "likelihood": {"reverse": 0.75, "strikeslip": 0.7, "twosands": 0.35}, "where": {"attribute": "coherence", "x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 520}}, {"id": "faultnet", "line": "ml", "label": "Fault-detection network labels the discontinuity a normal fault", "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse faults", "reportedConfidence": 0.95, "likelihood": {"reverse": 0.55, "strikeslip": 0.5, "twosands": 0.2}}], "outcome": {"statement": "The section was built with a reverse fault of 110 m throw that W2 crosses at about 910 m.", "confidence": 0.9, "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."}, "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall. The fault-detection network finds the fault, which argues against two unrelated sands, but it labels every fault normal because that is the only type in its training set.", "leads": [{"id": "dipmeter", "label": "Dipmeter across the fault in W2", "result": "Bed dips steepen sharply just above 910 m and return to regional dip below.", "likelihood": {"reverse": 0.8, "strikeslip": 0.4, "twosands": 0.2}}, {"id": "biostrat", "label": "Biostratigraphy of both sands", "result": "Both sands contain the same microfossil zone.", "likelihood": {"reverse": 0.9, "strikeslip": 0.3, "twosands": 0.15}}, {"id": "strikeline", "label": "Second 2D line along strike", "result": "The fault keeps the same up-to-east sense along strike.", "likelihood": {"reverse": 0.75, "strikeslip": 0.3, "twosands": 0.5}}]});
+GW.registerCase({"id": "easy-02-twice-through", "title": "Twice through", "tier": "easy", "author": "Heather Bedle (example of a case submitted as a JSON file)", "summary": "Reflections step up to the east, and one well logs the same-looking sand twice.", "brief": "Reflections east of a moderately dipping surface sit higher than their counterparts to the west. W2 logs two sands of similar thickness and character where W1 logs one.", "seismic": {"type": "synthetic", "frequency_hz": 38, "phase_deg": 0, "Q": 180, "noise": 0.15, "multiples": 0.3, "diffractions": 0.3, "statics_ms": 2, "footprint": 0.03, "velocityError": 0.015, "seed": 111, "model": {"width_m": 4000, "depth_m": 2200, "dx_m": 12.5, "dz_m": 4, "dip_m_per_km": 20, "layers": [{"name": "Overburden", "lith": "shale", "thickness_m": 500, "lamination": 0.9}, {"name": "Sand A", "lith": "sand", "thickness_m": 60, "profile": "fining"}, {"name": "Shale 1", "lith": "shale", "thickness_m": 120}, {"name": "Ridge Limestone", "lith": "limestone", "thickness_m": 40}, {"name": "Shale 2", "lith": "silty_shale", "thickness_m": 150}, {"name": "Sand B", "lith": "sand", "thickness_m": 80, "profile": "coarsening"}, {"name": "Shale 3", "lith": "shale", "thickness_m": 200}, {"name": "Sand C", "lith": "tight_sand", "thickness_m": 70}, {"name": "Shale 4", "lith": "shale", "thickness_m": 400}, {"name": "Lower Limestone", "lith": "limestone", "thickness_m": 50}, {"name": "Basal shale", "lith": "silty_shale", "thickness_m": 1000}], "faults": [{"x_m": 1600, "dip_deg": 40, "dipDirection": 1, "throw_m": 110, "sense": "reverse", "tip_m": 380, "tipTaper_m": 120}]}, "velocitySmoothing_m": 25}, "wells": [{"name": "W1", "x_m": 900, "td_m": 1800, "depthUncertainty_m": 5, "note": "Modern wireline suite: gamma ray, caliper, resistivity, density, neutron, sonic."}, {"name": "W2", "x_m": 2684, "td_m": 1800, "depthUncertainty_m": 8, "note": "Vertical well. Cuttings descriptions report the same fine sandstone at both levels."}], "logWindow": {"top_m": 450, "base_m": 1750}, "tops": [{"name": "Ridge Limestone", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}, {"name": "Sand B, second", "expert": {"W1": {"absent": true}, "W2": {"depth": 924, "unc_m": 10, "note": "Footwall Sand B below the fault."}}}, {"name": "Sand C", "expert": {"W1": {"depth": "model", "unc_m": 5}, "W2": {"depth": "model", "unc_m": 8}}}], "candidates": [{"id": "reverse", "label": "Reverse fault", "description": "A [[reverse-fault]] with the [[hanging-wall]] up to the east, formed under horizontal shortening.", "pros": ["Reflections east of the fault are higher by a similar amount at every level.", "A borehole crossing a reverse fault logs part of the section twice, as W2 does for Sand B."], "cons": ["A single 2D line records only [[apparent-separation]]."], "sketch": "reverse-fault"}, {"id": "strikeslip", "label": "Strike-slip fault", "description": "A [[strike-slip]] fault whose horizontal motion appears as reverse separation on this line.", "pros": ["No strike information is available from one line."], "cons": ["Repetition of a unit in a vertical well is not an expected result of strike-slip motion on a planar fault."], "sketch": "strike-slip"}, {"id": "twosands", "label": "Two similar sands, no repetition", "description": "W2 penetrated two separate sand bodies with similar log character; the offset of reflections has another cause.", "pros": ["Sands of similar thickness and log shape are common in a cyclic succession."], "cons": ["W1 has only one sand at this level, 1.9 km away.", "The two W2 sands bracket the depth where the discontinuity crosses the well."], "sketch": "two-sands"}], "evidence": [{"id": "up", "label": "Reflections higher east of the discontinuity", "likelihood": {"reverse": 0.9, "strikeslip": 0.6, "twosands": 0.5}, "where": {"x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 500}, "line": "seismic"}, {"id": "repeat", "label": "Two Sand B-like units in W2", "likelihood": {"reverse": 0.8, "strikeslip": 0.3, "twosands": 0.5}, "where": {"well": "W2", "top_m": 805, "base_m": 1010}, "line": "logs"}, {"id": "bracket", "label": "The two sands bracket the fault crossing in W2", "likelihood": {"reverse": 0.85, "strikeslip": 0.4, "twosands": 0.25}, "where": {"well": "W2", "top_m": 890, "base_m": 930}, "line": "logs", "discover": [{"type": "pickTop", "top": "Sand B, second"}, {"type": "lookWell"}]}, {"id": "cuttings", "label": "Cuttings descriptions identical at both levels", "likelihood": {"reverse": 0.6, "strikeslip": 0.5, "twosands": 0.5}, "line": "seismic", "discover": [{"type": "given"}]}, {"id": "oneline", "label": "Only one 2D line", "likelihood": {"reverse": 0.5, "strikeslip": 0.7, "twosands": 0.5}, "line": "seismic", "discover": [{"type": "given"}]}, {"id": "coh", "line": "attributes", "label": "Coherence: one narrow low-coherence line dips east through the step", "likelihood": {"reverse": 0.75, "strikeslip": 0.7, "twosands": 0.35}, "where": {"attribute": "coherence", "x_m": 2200, "z_m": 1000, "rx_m": 550, "rz_m": 520}}, {"id": "faultnet", "line": "ml", "label": "Fault-detection network labels the discontinuity a normal fault", "model": "Supervised network trained on interpreted normal faults from another basin; its training set has no reverse faults", "reportedConfidence": 0.95, "likelihood": {"reverse": 0.55, "strikeslip": 0.5, "twosands": 0.2}, "modelName": "Fault-detection network"}], "outcome": {"statement": "The section was built with a reverse fault of 110 m throw that W2 crosses at about 910 m.", "confidence": 0.9, "basis": "Log character alone cannot prove two sands are the same unit. Biostratigraphy or a dipmeter across the fault would raise confidence further."}, "debrief": "The fault crosses W2 between the two sands. The upper sand is Sand B in the hanging wall; the lower is Sand B again in the footwall. The fault-detection network finds the fault, which argues against two unrelated sands, but it labels every fault normal because that is the only type in its training set.", "leads": [{"id": "dipmeter", "label": "Dipmeter across the fault in W2", "result": "Bed dips steepen sharply just above 910 m and return to regional dip below.", "likelihood": {"reverse": 0.8, "strikeslip": 0.4, "twosands": 0.2}}, {"id": "biostrat", "label": "Biostratigraphy of both sands", "result": "Both sands contain the same microfossil zone.", "likelihood": {"reverse": 0.9, "strikeslip": 0.3, "twosands": 0.15}}, {"id": "strikeline", "label": "Second 2D line along strike", "result": "The fault keeps the same up-to-east sense along strike.", "likelihood": {"reverse": 0.75, "strikeslip": 0.3, "twosands": 0.5}}]});
 </script>
   <script>GW.start();</script>
 </body>

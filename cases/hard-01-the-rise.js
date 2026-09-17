@@ -290,7 +290,16 @@ GW.registerCase({
         "top_m": 1145,
         "base_m": 1215
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RHOB"
+        },
+        {
+          "type": "lookWell"
+        }
+      ]
     },
     {
       "id": "grcorr",
@@ -305,7 +314,14 @@ GW.registerCase({
         "top_m": 1335,
         "base_m": 1400
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Low-GR unit",
+          "minWells": 2
+        }
+      ]
     },
     {
       "id": "rescorr",
@@ -320,7 +336,13 @@ GW.registerCase({
         "top_m": 1145,
         "base_m": 1215
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RES"
+        }
+      ]
     },
     {
       "id": "dim",
@@ -336,7 +358,12 @@ GW.registerCase({
         "rx_m": 650,
         "rz_m": 350
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        }
+      ]
     },
     {
       "id": "basemarker",
@@ -351,7 +378,18 @@ GW.registerCase({
         "top_m": 1405,
         "base_m": 1455
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "pickTop",
+          "top": "Base Marker",
+          "minWells": 2
+        },
+        {
+          "type": "flatten",
+          "top": "Base Marker"
+        }
+      ]
     },
     {
       "id": "w3res",
@@ -366,7 +404,13 @@ GW.registerCase({
         "top_m": 700,
         "base_m": 1900
       },
-      "line": "logs"
+      "line": "logs",
+      "discover": [
+        {
+          "type": "log",
+          "log": "RES"
+        }
+      ]
     },
     {
       "id": "deepevent",
@@ -382,7 +426,16 @@ GW.registerCase({
         "rx_m": 900,
         "rz_m": 160
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        },
+        {
+          "type": "domain",
+          "domain": "time"
+        }
+      ]
     },
     {
       "id": "envcrest",
@@ -464,7 +517,8 @@ GW.registerCase({
         "growthfold": 0.5,
         "drape": 0.55,
         "diapir": 0.48
-      }
+      },
+      "modelName": "Reef classifier"
     }
   ],
   "outcome": {

@@ -43,7 +43,7 @@
   const pct = (v) => Math.round(v * 100) + '%';
   const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const S = { c: null, session: [], tier: 'easy' };
+  const S = { c: null, session: [], tier: 'easy', mode: 'discovery' };
 
   /* ---------- registration and validation ---------- */
   function validate(c) {
@@ -180,7 +180,7 @@
     Object.assign(S, {
       expertStatic: Object.fromEntries(cands.map((k) => [k.id, Number(ec[k.id] || 0) / esum])),
       raw: Object.fromEntries(cands.map((k) => [k.id, 50])),
-      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null,
+      links: {}, examined: [], snaps: [], selected: null, anchors: {}, logs: null, expertTops: null, found: new Set(), foundHow: {}, hints: 0, hinted: new Set(), looks: 0,
       picks: {}, submitted: false, flatten: '', logType: 'GR',
       viewed: new Set(['GR']), flattenUsed: false, domain: 'depth', attr: 'amplitude', attrsSeen: new Set(['amplitude']), showPanel: false, gain: 1, cmap: 'gray', showWells: true, hoverY: null, img: null, section: null
     });
@@ -253,6 +253,8 @@
     $('#showPanel').checked = S.showPanel;
     renderLegend();
     renderSuspects();
+    if (S.mode === 'discovery') orderedEvidence().forEach((e) => { if (triggersOf(e).some((t) => t.type === 'given')) { S.found.add(e.id); S.foundHow[e.id] = 'In the case file'; if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); } } });
+    renderModels();
     renderRail();
     renderNotes();
     renderNoteDetail();
@@ -300,6 +302,11 @@
     let html = '', lastLine = null, i = 0;
     items.forEach((e) => {
       const ln = lineOf(e);
+      if (!isFound(e.id)) {
+        if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
+        html += '<span class="note ghost" style="--line:' + lineInfo(ln).color + '"><span class="note-no">' + noteNo(e.id) + '</span><span class="ghost-q" aria-label="Clue not yet found">?</span></span>';
+        return;
+      }
       if (ln !== lastLine) { if (lastLine) html += '</div>'; html += '<p class="line-head" style="--line:' + lineInfo(ln).color + '">' + lineInfo(ln).label + '</p><div class="notes-row">'; lastLine = ln; }
       const seen = S.examined.includes(e.id), links = S.links[e.id] || {};
       const tags = S.c.candidates.map((k, ci) => links[k.id] ? '<span class="tag ' + links[k.id] + '">' + String.fromCharCode(65 + ci) + (links[k.id] === 'for' ? '+' : '−') + '</span>' : '').join('');
@@ -312,6 +319,121 @@
     $('#notes').innerHTML = html;
   }
 
+  /* ---------- discovery ---------- */
+  const isFound = (id) => S.mode === 'lecture' || S.found.has(id) || !orderedEvidence().some((e) => e.id === id);
+  function triggersOf(e) {
+    if (e.discover) return e.discover;
+    const w = e.where, ln = lineOf(e);
+    if (ln === 'ml' && !(w && w.attribute)) return [{ type: 'model' }];
+    if (w && w.attribute) return [{ type: 'view', attribute: w.attribute }];
+    if (w && w.well) return [{ type: 'lookWell', well: w.well, top_m: w.top_m, base_m: w.base_m }];
+    if (w && w.x_m != null) return [{ type: 'look', x_m: w.x_m, z_m: w.z_m, rx_m: w.rx_m, rz_m: w.rz_m }];
+    return [{ type: 'given' }];
+  }
+  function matches(t, ev, e) {
+    if (t.type !== ev.type) return false;
+    const w = e.where || {};
+    switch (t.type) {
+      case 'view': return t.attribute === ev.attribute;
+      case 'log': return t.log === ev.log;
+      case 'domain': return t.domain === ev.domain;
+      case 'flatten': return !t.top || t.top === ev.top;
+      case 'pickTop': return t.top === ev.top && ev.count >= (t.minWells || 1);
+      case 'model': return ev.id === e.id;
+      case 'look': {
+        const x = t.x_m != null ? t.x_m : w.x_m, z = t.z_m != null ? t.z_m : w.z_m;
+        const rx = (t.rx_m || w.rx_m || 300) * 1.25, rz = (t.rz_m || w.rz_m || 150) * 1.25, attr = t.attribute || 'amplitude';
+        return ev.attribute === attr && ((ev.x - x) / rx) ** 2 + ((ev.z - z) / rz) ** 2 <= 1;
+      }
+      case 'lookWell': {
+        const top = t.top_m != null ? t.top_m : w.top_m, base = t.base_m != null ? t.base_m : w.base_m;
+        return (t.well || w.well) === ev.well && ev.depth >= top - 15 && ev.depth <= base + 15;
+      }
+    }
+    return false;
+  }
+  const HOW = {
+    view: (t) => 'switched to the ' + GW.ATTRIBUTES[t.attribute].label.toLowerCase() + ' display',
+    log: (t) => 'displayed the ' + LOGS[t.log].label.toLowerCase() + ' log',
+    domain: () => 'switched to two-way time',
+    flatten: () => 'flattened the logs on a top',
+    pickTop: (t) => 'picked ' + t.top,
+    model: () => 'ran the model',
+    look: () => 'inspected the section',
+    lookWell: (t) => 'inspected well ' + t.well
+  };
+  function hintFor(e) {
+    if (e.hint) return e.hint;
+    const t = triggersOf(e).find((q) => q.type !== 'given') || {};
+    const w = e.where || {};
+    switch (t.type) {
+      case 'view': return 'Something shows on the ' + GW.ATTRIBUTES[t.attribute].label.toLowerCase() + ' display.';
+      case 'log': return 'A clue is in the ' + LOGS[t.log].label.toLowerCase() + ' log.';
+      case 'domain': return 'The line can also be displayed in two-way time.';
+      case 'flatten': return 'Flattening the logs on a picked top shows something.';
+      case 'pickTop': return 'Picking ' + t.top + ' in the wells shows something.';
+      case 'model': return 'The model bench has a result not yet run.';
+      case 'look': { const x = t.x_m != null ? t.x_m : w.x_m, z = t.z_m != null ? t.z_m : w.z_m; return 'Look closely at the section around ' + (Math.round(x / 500) * 0.5).toFixed(1) + ' km, ' + Math.round(z / 100) * 100 + ' m.'; }
+      case 'lookWell': { const top = t.top_m != null ? t.top_m : w.top_m, base = t.base_m != null ? t.base_m : w.base_m; return 'Look closely at well ' + (t.well || w.well) + ' between ' + Math.round(top / 50) * 50 + ' and ' + Math.round(base / 50) * 50 + ' m.'; }
+    }
+    return 'Read the case file again.';
+  }
+  function trigger(ev) {
+    if (!S.c || S.mode !== 'discovery' || S.submitted) return false;
+    const hits = [];
+    orderedEvidence().forEach((e) => {
+      if (S.found.has(e.id)) return;
+      const t = triggersOf(e).find((q) => matches(q, ev, e));
+      if (t) hits.push({ e, t });
+    });
+    hits.forEach(({ e, t }) => {
+      S.found.add(e.id); S.foundHow[e.id] = (HOW[t.type] || (() => 'found'))(t);
+      if (!S.examined.includes(e.id)) { S.snaps.push(shares()); S.examined.push(e.id); }
+    });
+    if (hits.length) {
+      S.selected = hits[hits.length - 1].e.id;
+      toast(hits.map(({ e }) => '<span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + noteNo(e.id) + '</span> ' + esc(e.label)).join('<br>'), 'New clue' + (hits.length > 1 ? 's' : '') + ' found');
+      renderNotes(); renderNoteDetail(); renderRail(); renderModels();
+      drawTimeline(); requestAnimationFrame(() => { drawSeis(); drawLogs(); drawStrings(); });
+    }
+    return hits.length > 0;
+  }
+  function toast(html, title) {
+    const t = $('#toast');
+    t.innerHTML = '<p class="toast-title">' + esc(title) + '</p><p>' + html + '</p>';
+    t.hidden = false; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    clearTimeout(S._toastT); S._toastT = setTimeout(() => { t.hidden = true; }, 4200);
+  }
+  function giveHint() {
+    const pending = orderedEvidence().filter((e) => !S.found.has(e.id));
+    if (!pending.length) { toast('Every clue on this case has been found.', 'Hint'); return; }
+    const fresh = pending.filter((e) => !S.hinted.has(e.id)), e = (fresh.length ? fresh : pending)[0];
+    S.hinted.add(e.id); S.hints++;
+    toast('<span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + lineInfo(lineOf(e)).label + '</span> ' + esc(hintFor(e)), 'Hint');
+    renderRail();
+  }
+  const plainTerms = (t) => String(t || '').replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (m, k, l) => l || k);
+  function renderModels() {
+    const ml = orderedEvidence().filter((e) => lineOf(e) === 'ml');
+    const hasSom = ml.some((e) => e.where && e.where.attribute === 'som');
+    const models = ml.filter((e) => !(e.where && e.where.attribute));
+    $('#modelsCard').hidden = !ml.length;
+    let html = '';
+    if (hasSom) html += '<li><span class="model-name">Self-organizing map facies</span><span class="model-sub">Unsupervised, 8 classes, from four attributes</span><button type="button" class="btn small" data-run="som">' + (S.attrsSeen.has('som') ? 'Show' : 'Run') + '</button></li>';
+    models.forEach((e) => {
+      const done = S.mode === 'lecture' || S.found.has(e.id);
+      html += '<li><span class="model-name">' + esc(e.modelName || 'Model') + '</span><span class="model-sub">' + esc(plainTerms(e.model)) + '</span><button type="button" class="btn small" data-run="' + esc(e.id) + '">' + (done ? 'Open result' : 'Run') + '</button></li>';
+    });
+    $('#models').innerHTML = html;
+  }
+  function setMode(mode) {
+    if (S.mode === mode) return;
+    S.mode = mode;
+    try { localStorage.setItem('geoDetectiveMode', mode); } catch (e) { /* storage unavailable */ }
+    document.body.classList.toggle('lecture', mode === 'lecture');
+    if (S.c) loadCase(S.c.id);
+  }
+
   /* ---------- lines of evidence rail and walk-through ---------- */
   function walkOrder() { return orderedEvidence().map((e) => e.id); }
   function renderRail() {
@@ -320,12 +442,16 @@
     const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
     $('#railLines').innerHTML = groups.map((g) =>
       '<div class="rail-line" style="--line:' + g.l.color + '"><span class="rail-label">' + g.l.label + '</span><span class="rail-dots">' +
-      g.items.map((e) => '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + '" data-rail="' + esc(e.id) + '"' + (e.kind === 'lead' && !S.examined.includes(e.id) ? ' disabled' : '') + ' title="' + esc(noteNo(e.id) + ' ' + e.label) + '">' + noteNo(e.id) + '</button>').join('') +
+      g.items.map((e) => { const hid = e.kind !== 'lead' && !isFound(e.id); return '<button type="button" class="rail-dot' + (S.examined.includes(e.id) ? ' seen' : '') + (S.selected === e.id ? ' current' : '') + (hid ? ' hidden-clue' : '') + '" data-rail="' + esc(e.id) + '"' + ((e.kind === 'lead' && !S.examined.includes(e.id)) || hid ? ' disabled' : '') + ' title="' + esc(hid ? noteNo(e.id) + ' not yet found' : noteNo(e.id) + ' ' + e.label) + '">' + (hid ? '?' : noteNo(e.id)) + '</button>'; }).join('') +
       '</span></div>').join('');
     const next = order.find((id, k) => k > pos && !S.examined.includes(id)) || order[pos + 1];
     $('#clueNext').disabled = !next;
     $('#cluePrev').disabled = pos <= 0;
-    $('#clueCount').textContent = S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+    const disc = S.mode === 'discovery';
+    $('#clueCount').textContent = disc ? S.found.size + ' of ' + order.length + ' clues found' + (S.hints ? ' · ' + S.hints + ' hint' + (S.hints === 1 ? '' : 's') : '') : S.examined.length + ' of ' + (order.length + leads.length) + ' clues examined';
+    $('#cluePrev').hidden = $('#clueNext').hidden = disc;
+    $('#hintBtn').hidden = !disc || S.submitted;
+    document.querySelectorAll('#modeSwitch button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === S.mode));
   }
   function stepClue(dir) {
     const order = walkOrder(), pos = S.selected ? order.indexOf(S.selected) : -1;
@@ -348,7 +474,8 @@
     const ln = lineInfo(lineOf(e));
     box.style.setProperty('--line', ln.color);
     const model = lineOf(e) === 'ml' && (e.model || e.reportedConfidence != null) ? '<p class="model-card">' + (e.model ? '<span>' + rich(e.model) + '</span>' : '') + (e.reportedConfidence != null ? '<span>Confidence reported by the model: <b>' + pct(e.reportedConfidence) + '</b></span>' : '') + '</p>' : '';
-    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + model +
+    const how = S.mode === 'discovery' && S.foundHow[e.id] ? '<p class="found-how">Found: ' + esc(S.foundHow[e.id]) + '</p>' : '';
+    box.innerHTML = '<div class="detail-head"><span class="note-no">' + noteNo(e.id) + ' · ' + ln.label.toLowerCase() + '</span><span class="where">' + where + '</span></div>' + how + model +
       (e.kind === 'lead' ? '<p class="lead-q">' + rich(e.label) + '</p><p class="lead-a">' + rich(e.result || '') + '</p>' : '<p class="detail-text">' + rich(e.label) + '</p>' + (e.detail ? '<p class="howto">' + rich(e.detail) + '</p>' : '')) +
       '<p class="howto">String this note to the suspects it bears on:</p>' +
       '<div class="linkrows">' + S.c.candidates.map((k, ci) => {
@@ -372,6 +499,7 @@
 
   function setAttr(k) {
     S.attr = k; S.attrsSeen.add(k); $('#attr').value = k; S._imgKey = null;
+    setTimeout(() => trigger({ type: 'view', attribute: k }), 60);
     $('#building').hidden = false; $('#building').textContent = 'Computing ' + GW.ATTRIBUTES[k].label.toLowerCase() + '…';
     setTimeout(() => { GW.attribute(S.section, k); $('#building').hidden = true; renderLegend(); drawSeis(); drawStrings(); }, 20);
   }
@@ -638,8 +766,16 @@
       circleMark(ctx, cx, cy, rx, ry, e.id === S.selected, noteNo(e.id));
       S.anchors[e.id] = { el: 'seis', x: cx + rx * 0.72, y: cy - ry * 0.72 };
     });
+    drawRipple(ctx);
   }
 
+  function drawRipple(ctx) {
+    if (!S.ripple) return;
+    ctx.save(); ctx.strokeStyle = S.ripple.found ? '#C0161F' : 'rgba(255,255,255,0.95)'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.arc(S.ripple.x, S.ripple.y, 15, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(S.ripple.x, S.ripple.y, 17.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   function circleMark(ctx, cx, cy, rx, ry, strong, label) {
     ctx.save();
     ctx.strokeStyle = '#C0161F'; ctx.lineWidth = strong ? 3.2 : 2.2; ctx.globalAlpha = strong ? 1 : 0.85;
@@ -779,7 +915,13 @@
   }
 
   function logClick(ev) {
-    if (S.submitted || !S.activeTop || !S.logGeom) return;
+    if (S.submitted || !S.logGeom) return;
+    if (!S.activeTop) {
+      const r0 = ev.target.getBoundingClientRect(), x0 = ev.clientX - r0.left, y0 = ev.clientY - r0.top, G = S.logGeom;
+      const k0 = Math.floor((x0 - G.m.l) / (G.tw + G.gap));
+      if (k0 >= 0 && k0 < S.c.wells.length && y0 > G.m.t) { const wn = S.c.wells[k0].name; trigger({ type: 'lookWell', well: wn, depth: G.win.top_m + ((y0 - G.m.t) / G.ph) * (G.win.base_m - G.win.top_m) + flatShift(wn) }); }
+      return;
+    }
     const r = ev.target.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
     const { m, tw, gap, ph, win } = S.logGeom;
     const k = Math.floor((x - m.l) / (tw + gap));
@@ -795,7 +937,9 @@
     } else {
       if (S.flatten === S.activeTop) return; // flattened top cannot be moved while flattened
       P[w.name] = Math.round(d);
+      trigger({ type: 'pickTop', top: S.activeTop, count: S.c.wells.filter((q) => P[q.name] != null).length });
     }
+    trigger({ type: 'lookWell', well: w.name, depth: d });
     drawLogs(); drawSeis(); drawStrings();
   }
 
@@ -805,9 +949,10 @@
     const just = $('#justify').value.trim();
     if (!$('#justifyWrap').hidden && just.length < 40) { $('#submitMsg').textContent = 'This case needs a written justification of at least a sentence or two.'; $('#justify').focus(); return; }
     S.submitted = true; S.player = shares(); S.justification = just;
+    $('#toast').hidden = true;
     document.body.classList.add('locked');
     $('#submit').disabled = true; $('#submitMsg').textContent = '';
-    renderDebrief(); renderLeads();
+    renderDebrief(); renderLeads(); renderRail(); renderModels();
     drawSeis(); drawLogs(); drawTimeline(); drawStrings();
     $('#debrief').hidden = false;
     $('#debrief').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -866,7 +1011,7 @@
       '<div><dt>Largest weight</dt><dd>' + pct(P[pLead.id]) + ' <small>you, ' + esc(pLead.label) + '</small> / ' + pct(E[lead.id]) + ' <small>panel, ' + esc(lead.label) + '</small></dd></div>' +
       '</dl>' +
       (bayes ? '<h4>Uncertainty timeline</h4><div class="tl-wrap"><svg id="timelineBig" class="timeline big" role="img" aria-label="Spread of confidence after each note"></svg><p class="tl-key"><span class="k you"></span>You <span class="k panel"></span>Panel</p></div>' : '') +
-      byLine() + mlTable() +
+      discoveryReport() + byLine() + mlTable() +
       narrowing +
       (c.outcome ? '<div class="outcome"><h4>What is known</h4><p>' + rich(c.outcome.statement) + '</p>' +
         '<div class="conf"><span>Confidence attached to this outcome</span><span class="track"><span class="fill" style="width:' + (c.outcome.confidence * 100) + '%"></span></span><strong>' + pct(c.outcome.confidence) + '</strong></div>' +
@@ -879,10 +1024,18 @@
     $('#biasToggle').checked = false; $('#bias').hidden = true;
     $('#bias').innerHTML = biasCheck(E);
     S.session = S.session.filter((r) => r.id !== c.id);
-    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.examined.length, you: spread(P), panel: spread(E) });
+    S.session.push({ id: c.id, title: c.title, tier: c.tier, overlap, notes: S.mode === 'discovery' ? S.found.size + ' of ' + orderedEvidence().length + ' found' : S.examined.length + ' examined', you: spread(P), panel: spread(E) });
     renderSession();
   }
 
+  function discoveryReport() {
+    if (S.mode !== 'discovery') return '';
+    const ev = orderedEvidence(), missed = ev.filter((e) => !S.found.has(e.id));
+    const drop = (e) => Math.round(Math.max(0, 1 - spread(posterior([e.id]))) * 100);
+    return '<h4>Clues found</h4><p class="standing">' + (ev.length - missed.length) + ' of ' + ev.length + ' clues found' + (S.hints ? ', with ' + S.hints + ' hint' + (S.hints === 1 ? '' : 's') : ', with no hints') + '.</p>' +
+      (missed.length ? '<p class="howto">Clues not found, where each was, and how much each narrows the panel\u2019s field on its own.</p><div class="table-wrap"><table><thead><tr><th></th><th>Clue</th><th>Where it was</th><th>Narrowing</th></tr></thead><tbody>' +
+        missed.map((e) => '<tr><td><span class="toast-no" style="background:' + lineInfo(lineOf(e)).color + '">' + noteNo(e.id) + '</span></td><td>' + esc(e.label) + '</td><td>' + esc(hintFor(e)) + '</td><td><span class="mini"><span style="width:' + Math.min(100, drop(e) * 3) + '%"></span></span> ' + drop(e) + '</td></tr>').join('') + '</tbody></table></div>' : '');
+  }
   function byLine() {
     if (!usesLikelihood()) return '';
     const groups = LINES.map((l) => ({ l, items: allItems().filter((e) => lineOf(e) === l.id) })).filter((g) => g.items.length);
@@ -976,15 +1129,26 @@
     $('#attr').addEventListener('change', (e) => setAttr(e.target.value));
     $('#showPanel').addEventListener('change', (e) => { S.showPanel = e.target.checked; drawTimeline(); });
     $('#cluePrev').addEventListener('click', () => stepClue(-1));
+    $('#hintBtn').addEventListener('click', giveHint);
+    $('#modeSwitch').addEventListener('click', (e) => { const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); });
+    $('#models').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-run]'); if (!b || b.disabled) return;
+      if (b.dataset.run === 'som') { setAttr('som'); $('#seisPanel').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' }); setTimeout(renderModels, 80); return; }
+      const id = b.dataset.run;
+      if (S.mode === 'lecture' || S.found.has(id) || S.submitted) { examine(id); return; }
+      b.disabled = true; b.textContent = 'Running…';
+      setTimeout(() => { trigger({ type: 'model', id }); examine(id); renderModels(); }, 700);
+    });
     $('#clueNext').addEventListener('click', () => stepClue(1));
     $('#railLines').addEventListener('click', (e) => { const b = e.target.closest('button[data-rail]'); if (b && !b.disabled) { examine(b.dataset.rail); focusClue(b.dataset.rail); } });
-    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
-    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); });
+    document.addEventListener('keydown', (e) => { const ae = document.activeElement || {}; if (!S.c || $('#howDlg').open || /TEXTAREA|SELECT/.test(ae.tagName || '') || (ae.tagName === 'INPUT' && !/checkbox|radio|button/.test(ae.type))) return; if (S.mode !== 'lecture') return; if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); stepClue(1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); stepClue(-1); } });
+    $('#domain').addEventListener('change', (e) => { S.domain = e.target.value; drawSeis(); drawStrings(); trigger({ type: 'domain', domain: S.domain }); });
     $('#gain').addEventListener('input', (e) => { S.gain = Number(e.target.value); $('#gainOut').textContent = S.gain.toFixed(1) + '×'; drawSeis(); });
     $('#showWells').addEventListener('change', (e) => { S.showWells = e.target.checked; drawSeis(); });
     $('#logType').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-log]'); if (!b || b.disabled) return;
       S.logType = b.dataset.log; (LOGS[S.logType].combo || [S.logType]).forEach((k) => S.viewed.add(k));
+      (LOGS[S.logType].combo || [S.logType]).forEach((k) => trigger({ type: 'log', log: k }));
       document.querySelectorAll('#logType button').forEach((x) => x.setAttribute('aria-pressed', x === b));
       drawLogs(); drawStrings();
     });
@@ -992,7 +1156,7 @@
     $('#flatten').addEventListener('change', (e) => {
       const t = e.target.value;
       if (t && S.c.wells.some((w) => S.picks[t][w.name] == null)) { $('#logReadout').textContent = 'Pick ' + t + ' in every well to flatten on it.'; e.target.value = S.flatten; return; }
-      S.flatten = t; if (t) S.flattenUsed = true; drawLogs(); drawStrings();
+      S.flatten = t; if (t) { S.flattenUsed = true; trigger({ type: 'flatten', top: t }); } drawLogs(); drawStrings();
     });
     $('#clearPicks').addEventListener('click', () => { if (S.submitted) return; Object.keys(S.picks).forEach((k) => (S.picks[k] = {})); S.flatten = ''; $('#flatten').value = ''; drawLogs(); drawSeis(); drawStrings(); });
     const lc = $('#logs');
@@ -1000,6 +1164,15 @@
     lc.addEventListener('mousemove', (e) => { S.hoverY = e.clientY - lc.getBoundingClientRect().top; drawLogs(); });
     lc.addEventListener('mouseleave', () => { S.hoverY = null; $('#logReadout').textContent = ''; drawLogs(); });
     const sc = $('#seis');
+    sc.addEventListener('click', (e) => {
+      const g = S.seisGeom; if (!g || !S.section) return;
+      const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
+      if (x < 0 || x > S.width_m || v < 0 || v > g.vmax) return;
+      const z = S.domain === 'time' ? zAt(x, v) : v;
+      S.looks++;
+      S.ripple = { x: e.clientX - r.left, y: e.clientY - r.top, found: trigger({ type: 'look', x, z, attribute: S.attr }) };
+      drawSeis(); clearTimeout(S._ripT); S._ripT = setTimeout(() => { S.ripple = null; drawSeis(); }, 450);
+    });
     sc.addEventListener('mousemove', (e) => {
       const g = S.seisGeom; if (!g) return;
       const r = sc.getBoundingClientRect(), x = ((e.clientX - r.left - g.m.l) / g.pw) * S.width_m, v = ((e.clientY - r.top - g.m.t) / g.ph) * g.vmax;
@@ -1073,6 +1246,8 @@
 
   GW.start = async function () {
     GW._ready = true;
+    try { const m = localStorage.getItem('geoDetectiveMode'); if (m === 'lecture' || m === 'discovery') S.mode = m; } catch (e) { /* storage unavailable */ }
+    document.body.classList.toggle('lecture', S.mode === 'lecture');
     wire();
     const params = new URLSearchParams(location.search);
     const url = params.get('case');

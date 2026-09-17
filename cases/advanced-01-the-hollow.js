@@ -177,7 +177,16 @@ GW.registerCase({
         "rx_m": 380,
         "rz_m": 90
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "look"
+        },
+        {
+          "type": "domain",
+          "domain": "time"
+        }
+      ]
     },
     {
       "id": "stacked",
@@ -209,7 +218,12 @@ GW.registerCase({
         "rx_m": 650,
         "rz_m": 160
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "nowells",
@@ -219,7 +233,12 @@ GW.registerCase({
         "submarine": 0.5,
         "collapse": 0.5
       },
-      "line": "seismic"
+      "line": "seismic",
+      "discover": [
+        {
+          "type": "given"
+        }
+      ]
     },
     {
       "id": "amplitude",
@@ -332,7 +351,8 @@ GW.registerCase({
         "valley": 0.5,
         "submarine": 0.5,
         "collapse": 0.55
-      }
+      },
+      "modelName": "Fault-detection network"
     }
   ],
   "outcome": {

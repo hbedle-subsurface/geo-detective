@@ -35,11 +35,13 @@
 
   <main id="game" hidden>
     <div class="rail" id="rail">
-      <p class="rail-title">Lines of evidence</p>
+      <div class="rail-head"><p class="rail-title">Lines of evidence</p>
+        <span id="modeSwitch" class="seg mode-seg" role="group" aria-label="Mode"><button type="button" data-mode="discovery">Discovery</button><button type="button" data-mode="lecture">Lecture walk-through</button></span></div>
       <div id="railLines" class="rail-lines"></div>
       <div class="rail-nav">
         <button type="button" id="cluePrev" class="btn small">◀ Previous clue</button>
         <span id="clueCount" class="clue-count"></span>
+        <button type="button" id="hintBtn" class="btn small ghost">Hint</button>
         <button type="button" id="clueNext" class="btn primary">Next clue ▶</button>
       </div>
     </div>
@@ -109,6 +111,12 @@
           <p class="chalk-title"><span class="num">3</span>Leads</p>
           <p class="chalk-sub">More data can be requested. <span id="leadsLeft"></span></p>
           <ul id="leads" class="leads"></ul>
+        </section>
+        <section class="card models-card" id="modelsCard">
+          <span class="pin"></span>
+          <p class="typed-label">Model bench</p>
+          <p class="howto">Machine learning results for this line.</p>
+          <ul id="models" class="models"></ul>
         </section>
         <section class="card timeline-card" id="timelineCard">
           <span class="pin"></span>
@@ -184,7 +192,7 @@
       <p class="typed-label">How to play</p>
       <h2>Working a case</h2>
       <ol class="how-steps">
-        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. <b>Next clue</b> (or the arrow keys) steps through them in order; any note can also be opened directly. Examine the sticky notes. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
+        <li><b>Evidence.</b> Clues are grouped in lines of evidence: seismic, well logs, attributes and machine learning. In <b>Discovery</b> mode most clues start hidden and turn up through investigation: clicking something unusual on the section or in a well, switching displays and logs, picking and flattening tops, and running models on the model bench. <b>Hint</b> points toward a clue not yet found. In <b>Lecture walk-through</b> mode every clue is on the board, and <b>Next clue</b> or the arrow keys step through them in order. Each one is circled on the seismic line or well logs, and can be strung to the suspects it supports or argues against. Tops can be picked and correlated on the logs.</li>
         <li><b>Suspects.</b> Share 100% of your confidence among the suspects with the sliders. The uncertainty timeline records how the spread of confidence changes after each note.</li>
         <li><b>Leads.</b> A limited number of further data requests, such as core or a 3D survey, can be made from the chalkboard.</li>
         <li><b>Close the case.</b> The case report compares your distribution with the panel after the same notes, shows how much each note and lead narrows the field, and states what is known and with what confidence.</li>
@@ -199,6 +207,7 @@
     </div>
   </dialog>
 
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <div id="termPop" class="term-pop" role="dialog" hidden></div>
 
   <script src="js/synth.js"></script>

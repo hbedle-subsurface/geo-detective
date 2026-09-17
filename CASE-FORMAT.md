@@ -206,6 +206,40 @@ The panel distribution is computed from the likelihoods by Bayes' rule, starting
 
 Cases written before likelihoods were added can still supply `expertConsensus` (`{ candidateId: weight }`) and no likelihoods; the board then compares against that fixed distribution and the timeline shows no panel line.
 
+### Discovery triggers
+
+In discovery mode most clues start hidden and are revealed by what the player does. Each evidence note can list its triggers in `discover`; the note is found when any one of them happens. Without `discover`, triggers come from the other fields:
+
+| Note has | Default trigger |
+|---|---|
+| `line: "ml"` and no `where.attribute` | running it on the model bench (`model`) |
+| `where.attribute` | switching Exhibit A to that display (`view`) |
+| `where.well` | clicking in that interval of that well, including placing a pick there (`lookWell`) |
+| `where.x_m` | clicking inside the circled region of the section, on the amplitude display (`look`) |
+| none of these | shown from the start, as part of the case file (`given`) |
+
+Trigger types for `discover`:
+
+```json
+"discover": [
+  { "type": "given" },
+  { "type": "look", "x_m": 2350, "z_m": 1150, "rx_m": 520, "rz_m": 520, "attribute": "amplitude" },
+  { "type": "lookWell", "well": "W2", "top_m": 1180, "base_m": 1320 },
+  { "type": "view", "attribute": "coherence" },
+  { "type": "log", "log": "CALI" },
+  { "type": "pickTop", "top": "Sand C", "minWells": 1 },
+  { "type": "flatten", "top": "Base Marker" },
+  { "type": "domain", "domain": "time" },
+  { "type": "model" }
+]
+```
+
+`look` and `lookWell` fall back to the note's own `where` for any field left out, so `{ "type": "lookWell" }` uses the circled interval. `look` accepts clicks within 1.25 times the region's half-widths, on the stated display (default amplitude), in either depth or time. `log` fires when that curve is displayed (the density–neutron view fires both `RHOB` and `NPHI`). `flatten` without `top` fires on flattening on any top.
+
+`hint` sets the text of a hint for the note; without it the hint is written from the first trigger (for example "Something shows on the coherence display."). `modelName` is the name shown on the model bench for `ml` notes that are run as models.
+
+The case report lists clues not found, where each was, and how much each narrows the panel's field. Switching between Discovery and Lecture walk-through reopens the case.
+
 ## `leads` (further data requests)
 
 ```json
